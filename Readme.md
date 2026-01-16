@@ -133,7 +133,7 @@ OLLAMA\_MODEL=llama3.1
 
 ### Step 1: Clone Repository
 
-git clone https://github.com/Sath2003/Expense\_Reimbursement\_System.git  
+git clone https://github.com/Sath2003/Expense_Reimbursement_System.git  
 cd Expense\_Reimbursement\_System
 
 ### Step 2: Start Backend & Database (Docker)
