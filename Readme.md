@@ -1,319 +1,206 @@
-Expense Reimbursement System
-Overview
+# Expense Reimbursement System
 
-The Expense Reimbursement System is a full-stack web application designed to streamline employee expense submissions and approvals with a secure, auditable, and AI-assisted workflow.
+## Overview
 
-The system supports:
-
-Receipt uploads (images and PDFs)
-
-Multi-level approvals (Manager → Finance)
-
-Optional AI-based bill verification using Llama via Ollama
+The **Expense Reimbursement System** is a full‑stack web application designed to streamline employee expense submissions and approvals with a secure, auditable, and AI‑assisted workflow. The system supports receipt uploads (images and PDFs), multi‑level approvals (Manager → Finance), and optional AI‑based bill verification using Llama via Ollama.
 
 This README consolidates all implementation and testing documentation into a single, practical guide.
 
-Key Features
+## Key Features
 
-Role-based access control
+*   Role‑based access: **Employee, Manager, Finance, Admin**
+*   Secure authentication using JWT
+*   Expense submission with receipt upload (JPG, PNG, PDF)
+*   Receipt viewer with image/PDF preview
+*   Two‑tier approval workflow (Manager verification → Finance verification)
+*   AI‑powered bill genuineness analysis (optional)
+*   Bill expiration date validation (no DB changes required)
+*   Dockerized backend, database, and AI services
+*   Modern Next.js frontend
 
-Employee
+## Tech Stack
 
-Manager
+### Backend
 
-Finance
+*   FastAPI (Python)
+*   SQLAlchemy ORM
+*   MySQL 8.0
+*   JWT Authentication
+*   OCR: Tesseract
+*   PDF Text Extraction: pdfplumber
+*   AI (Optional): Ollama + Llama models
 
-Admin
+### Frontend
 
-Secure authentication using JWT
+*   Next.js 13+
+*   React 18+
+*   Tailwind CSS
 
-Expense submission with receipt upload (JPG, PNG, PDF)
+### DevOps
 
-Receipt viewer with image & PDF preview
+*   Docker & Docker Compose
+*   Volume‑based receipt storage (/app/bills)
 
-Two-tier approval workflow
+## Project Structure (High Level)
 
-Manager verification
-
-Finance verification
-
-AI-powered bill genuineness analysis (optional)
-
-Bill expiration date validation (no database changes required)
-
-Fully Dockerized
-
-Backend
-
-Database
-
-AI services
-
-Modern frontend built with Next.js
-
-Tech Stack
-Backend
-
-FastAPI (Python)
-
-SQLAlchemy ORM
-
-MySQL 8.0
-
-JWT Authentication
-
-OCR: Tesseract
-
-PDF Text Extraction: pdfplumber
-
-AI (Optional): Ollama + Llama models
-
-Frontend
-
-Next.js 13+
-
-React 18+
-
-Tailwind CSS
-
-DevOps
-
-Docker & Docker Compose
-
-Volume-based receipt storage
-
-/app/bills
-
-Project Structure (High Level)
-Expense_Reimbursement_System/
-├── backend/
-│   ├── app/
-│   │   ├── routes/
-│   │   ├── services/
-│   │   ├── models/
-│   │   ├── schemas/
-│   │   └── utils/
-│   └── Dockerfile
-├── frontend/
-│   ├── app/
-│   │   ├── login/
-│   │   ├── manager-dashboard/
-│   │   ├── finance-dashboard/
-│   │   └── employee-dashboard/
-│   └── package.json
-├── docker-compose.yml
+Expense\_Reimbursement\_System/  
+├── backend/  
+│ ├── app/  
+│ │ ├── routes/  
+│ │ ├── services/  
+│ │ ├── models/  
+│ │ ├── schemas/  
+│ │ └── utils/  
+│ └── Dockerfile  
+├── frontend/  
+│ ├── app/  
+│ │ ├── login/  
+│ │ ├── manager-dashboard/  
+│ │ ├── finance-dashboard/  
+│ │ └── employee-dashboard/  
+│ └── package.json  
+├── docker-compose.yml  
 └── README.md
 
-Approval & Verification Workflow
-1. Employee Submits Expense
+## Approval & Verification Workflow
 
-Uploads receipt
+1.  **Employee Submits Expense**
+    *   Uploads receipt
+    *   Status: SUBMITTED
+2.  **Manager Review**
+    *   Views receipt in modal (image or PDF)
+    *   Approves for verification or rejects
+    *   Status: MANAGER\_APPROVED\_FOR\_VERIFICATION or MANAGER\_REJECTED
+3.  **Finance Review**
+    *   Views receipt again
+    *   Runs AI bill analysis (optional)
+    *   Final decision
+    *   Status: FINANCE\_APPROVED or FINANCE\_REJECTED
+4.  **Payment (Optional)**
+    *   Approved expenses can be marked as PAID
 
-Status: SUBMITTED
+## Receipt Viewer
 
-2. Manager Review
+*   Works for **Managers and Finance users**
+*   Supports:
+    *   Images (JPG, PNG, GIF)
+    *   PDFs (iframe preview)
+*   Secure file serving with path validation
+*   Download option available
 
-Views receipt in modal (image or PDF)
-
-Approves for verification or rejects
-
-Status:
-
-MANAGER_APPROVED_FOR_VERIFICATION
-
-MANAGER_REJECTED
-
-3. Finance Review
-
-Views receipt again
-
-Runs AI bill analysis (optional)
-
-Final decision
-
-Status:
-
-FINANCE_APPROVED
-
-FINANCE_REJECTED
-
-4. Payment (Optional)
-
-Approved expenses can be marked as PAID
-
-Receipt Viewer
-
-Available for Manager and Finance roles
-
-Supports:
-
-Images: JPG, PNG, GIF
-
-PDFs: iframe preview
-
-Secure file serving with path validation
-
-Download option available
-
-Receipt storage location:
+Receipts are stored inside the backend container at:
 
 /app/bills/YYYY/MM/
 
-AI Bill Verification (Optional)
+## AI Bill Verification (Optional)
 
 When enabled, Finance users can analyze receipts using Llama AI.
 
-AI Capabilities
+### AI Capabilities
 
-Genuineness score (0–100%)
+*   Genuineness score (0–100%)
+*   Risk level (LOW / MEDIUM / HIGH)
+*   Flaw detection
+*   Rejection reasons
+*   Recommendation (Approve / Review / Reject)
 
-Risk level: LOW / MEDIUM / HIGH
+### Requirements
 
-Flaw detection
+*   Ollama installed and running
+*   Llama model pulled (e.g. llama3.1)
 
-Rejection reasons
+Environment variables:
 
-Recommendation:
+OLLAMA\_ENABLED=True  
+OLLAMA\_URL=http://host.docker.internal:11434  
+OLLAMA\_MODEL=llama3.1
 
-Approve
+## Bill Expiration Validation
 
-Review
+*   Implemented fully in backend logic (no DB changes)
+*   Rules:
+    *   Current or previous month bills → valid until end of next month
+    *   Bills older than 2 months → automatically blocked
+*   Validation is integrated into AI evaluation flow
 
-Reject
+## How to Run the Project
 
-Requirements
+### Prerequisites
 
-Ollama installed and running
+*   Docker Desktop (Windows / Mac / Linux)
+*   Node.js 18+
+*   npm 9+
 
-Llama model pulled (e.g. llama3.1)
+### Step 1: Clone Repository
 
-Environment Variables
-OLLAMA_ENABLED=True
-OLLAMA_URL=http://host.docker.internal:11434
-OLLAMA_MODEL=llama3.1
+git clone https://github.com/Sath2003/Expense\_Reimbursement\_System.git  
+cd Expense\_Reimbursement\_System
 
-Bill Expiration Validation
+### Step 2: Start Backend & Database (Docker)
 
-Fully implemented in backend logic
-
-No database schema changes
-
-Rules:
-
-Current or previous month bills → valid until end of next month
-
-Bills older than 2 months → automatically blocked
-
-Integrated into the AI evaluation flow
-
-How to Run the Project
-Prerequisites
-
-Docker Desktop (Windows / Mac / Linux)
-
-Node.js 18+
-
-npm 9+
-
-Step 1: Clone the Repository
-git clone https://github.com/Sath2003/Expense_Reimbursement_System.git
-cd Expense_Reimbursement_System
-
-Step 2: Start Backend & Database (Docker)
+\# Build and start all backend services  
 docker-compose up -d --build
 
-
-Verify running containers:
+Verify containers:
 
 docker ps
 
+Expected containers: - expense\_backend - expense\_db
 
-Expected containers:
+### Step 3: (Optional) Start Ollama for AI Verification
 
-expense_backend
-
-expense_db
-
-Step 3: (Optional) Start Ollama for AI Verification
-ollama serve
+ollama serve  
 ollama pull llama3.1
 
-Step 4: Run Frontend
-cd frontend
-npm install
+### Step 4: Run Frontend
+
+cd frontend  
+npm install  
 npm run dev
 
-
-Frontend URL:
+Frontend will run at:
 
 http://localhost:3000
 
-Default Test Credentials
-Role	Email	Password
-Employee	employee@expensehub.com
-	Employee@123
-Manager	manager@expensehub.com
-	Manager@123
-Finance	finance@expensehub.com
-	Finance@123
-Useful Docker Commands
-# View backend logs
-docker logs expense_backend -f
+## Default Test Credentials
 
-# Stop all services
-docker-compose down
+| Role | Email | Password |
+| --- | --- | --- |
+| Employee | employee@expensehub.com | Employee@123 |
+| Manager | manager@expensehub.com | Manager@123 |
+| Finance | finance@expensehub.com | Finance@123 |
 
-# Stop services and remove volumes
+## Useful Docker Commands
+
+\# View logs  
+docker logs expense\_backend -f  
+  
+\# Stop all services  
+docker-compose down  
+  
+\# Stop and remove volumes  
 docker-compose down -v
 
-Troubleshooting
+## Troubleshooting
 
-Receipt not loading
+*   **Receipt not loading**: Check /app/bills volume and file permissions
+*   **PDF not rendering**: Verify file validity and CORS headers
+*   **AI analysis failing**: Ensure Ollama is running and reachable
+*   **Port 3306 error**: MySQL already running locally – stop local service
 
-Check /app/bills volume and file permissions
+## Documentation Consolidated
 
-PDF not rendering
+This README consolidates the following internal documents: - Receipt Viewer (Implementation & Quick Start) - Bill Preview & AI Verification - Bill Expiration Validation - Verification Workflow
 
-Verify file validity and CORS headers
+## Status
 
-AI analysis failing
-
-Ensure Ollama is running and reachable
-
-Port 3306 error
-
-MySQL already running locally → stop local MySQL service
-
-Documentation Consolidated
-
-This README consolidates:
-
-Receipt Viewer (Implementation & Quick Start)
-
-Bill Preview & AI Verification
-
-Bill Expiration Validation
-
-Verification Workflow
-
-Status
-
-✅ Backend: Complete & tested
-
-✅ Frontend: Core dashboards implemented
-
-✅ Receipt Viewer: Complete
-
+✅ Backend: Complete & tested  
+✅ Frontend: Core dashboards implemented  
+✅ Receipt Viewer: Complete  
 ✅ AI Verification: Integrated & optional
 
-Final Notes
+## Final Notes
 
-This project is production-ready from a backend perspective and suitable for:
+This project is production‑ready from a backend perspective and suitable for further UI/UX refinement, notification integration, and enterprise policy customization.
 
-UI/UX refinement
-
-Notification integration
-
-Enterprise-level policy customization
-
-For future enhancements, refer to service-level documentation inside the backend services/ directory.
+For any future enhancements, refer to service‑level documentation inside the backend services/ directory.
