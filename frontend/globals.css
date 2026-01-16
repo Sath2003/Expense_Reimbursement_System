@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f8f9fb;
+  color: #3a4358;
+  font-family: 'Segoe UI', 'Roboto', '-apple-system', 'BlinkMacSystemFont', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: 0.3px;
+}
+
+/* Headings */
+h1 {
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #2d3a52;
+}
+
+h2 {
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: #3a4358;
+}
+
+h3 {
+  font-weight: 600;
+  color: #4a5a77;
+}
+
+/* Links */
+a {
+  color: #6b7c9e;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #5a6b8a;
+}
+
+/* Form Elements */
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 15px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+  background-color: #ffffff;
+  border: 1px solid #d3d9e3;
+  border-radius: 6px;
+  padding: 10px 12px;
+  transition: all 0.3s ease;
+  color: #3a4358;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #5a6b8a;
+  box-shadow: 0 0 0 3px rgba(107, 124, 158, 0.1);
+  background-color: #f8f9fb;
+}
+
+/* Buttons */
+button {
+  font-family: inherit;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Code */
+code {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  background-color: #f0f2f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #3a4358;
+}
+
+pre {
+  background-color: #f0f2f5;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0f2f5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #a8b3c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #7a8699;
+}
+
+/* Utility classes for professional design */
+.card-shadow {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.card-shadow-md {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-shadow-lg {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

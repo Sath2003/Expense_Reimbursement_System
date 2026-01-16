@@ -1,0 +1,73 @@
+
+services:
+  expense_db:
+    image: mysql:8.0
+    container_name: expense_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: expense_reimbursement_db
+      MYSQL_USER: expense_user
+      MYSQL_PASSWORD: expense_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - expense_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - expense_network
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  expense_backend:
+    build: .
+    container_name: expense_backend
+    depends_on:
+      expense_db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql+pymysql://expense_user:expense_password@expense_db:3306/expense_reimbursement_db
+      DEBUG: "True"
+      SMTP_SERVER: "smtp.gmail.com"
+      SMTP_PORT: "587"
+      SMTP_EMAIL: "donotreplyto.allinone@gmail.com"
+      SMTP_PASSWORD: "gymy glqh esji qnno"
+      OLLAMA_ENABLED: "True"
+      OLLAMA_URL: "http://ollama:11434"
+      OLLAMA_MODEL: "llama2"
+      OLLAMA_STRICT: "False"
+    ports:
+      - "8000:8000"
+    volumes:
+      - bills_volume:/app/bills
+    networks:
+      - expense_network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+volumes:
+  mysql_data:
+  bills_volume:
+  ollama_data:
+
+networks:
+  expense_network:
+    driver: bridge
