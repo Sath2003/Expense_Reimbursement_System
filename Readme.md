@@ -166,7 +166,6 @@ http://localhost:3000
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Employee | employee@expensehub.com | Employee@123 |
 | Manager | manager@expensehub.com | Manager@123 |
 | Finance | finance@expensehub.com | Finance@123 |
 
