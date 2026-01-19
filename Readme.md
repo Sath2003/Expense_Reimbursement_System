@@ -123,9 +123,7 @@ OLLAMA\_MODEL=llama3.1
     *   Bills older than 2 months → automatically blocked
 *   Validation is integrated into AI evaluation flow
 
-## How to Run the Project
-
-### Prerequisites
+## 🚀 Quick Start
 
 *   Docker Desktop (Windows / Mac / Linux)
 *   Node.js 18+
@@ -139,30 +137,30 @@ cd Expense\_Reimbursement\_System
 ### Step 2: Start Backend & Database (Docker)
 
 \# Build and start all backend services  
-docker-compose up -d --build
+-- docker-compose up -d --build
 
 Verify containers:
 
-docker ps
+-- docker ps
 
-Expected containers: - expense\_backend - expense\_db
+-- Expected containers: - expense\_backend - expense\_db
 
 ### Step 3: (Optional) Start Ollama for AI Verification
 
-ollama serve  
-ollama pull llama3.1
+-- ollama serve  
+-- ollama pull llama3.1
 
 ### Step 4: Run Frontend
 
-cd frontend  
-npm install  
-npm run dev
+-- cd frontend  
+-- npm install  
+-- npm run dev
 
 Frontend will run at:
 
 http://localhost:3000
 
-## Default Test Credentials
+## 🔐 Default Users
 
 | Role | Email | Password |
 | --- | --- | --- |
