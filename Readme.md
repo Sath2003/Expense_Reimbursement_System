@@ -28,7 +28,7 @@ This README consolidates all implementation and testing documentation into a sin
 *   JWT Authentication
 *   OCR: Tesseract
 *   PDF Text Extraction: pdfplumber
-*   AI (Optional): Ollama + Llama models
+*   AI : Ollama + Llama models
 
 ### Frontend
 
@@ -168,6 +168,61 @@ http://localhost:3000
 | --- | --- | --- |
 | Manager | manager@expensehub.com | Manager@123 |
 | Finance | finance@expensehub.com | Finance@123 |
+
+## 🔥 Key API Endpoints
+
+## Root Endpoints (from main.py)
+
+*   **GET /** - Returns API information including version and docs URL
+*   **GET /health** - Health check endpoint that returns system status
+
+## Authentication Endpoints (/api/auth)
+
+*   **POST /api/auth/register** - Registers a new user and sends OTP for email verification
+*   **POST /api/auth/verify-otp** - Verifies OTP code to activate user account
+*   **POST /api/auth/login** - Authenticates user with email/password and returns access/refresh tokens
+*   **POST /api/auth/refresh-token** - Refreshes access token using refresh token
+*   **GET /api/auth/me** - Returns current authenticated user's profile information
+
+## Expense Management Endpoints (/api/expenses)
+
+*   **POST /api/expenses/submit** - Submits a new expense with optional receipt upload and AI validation
+*   **GET /api/expenses/{expense\_id}** - Retrieves detailed information for a specific expense
+*   **GET /api/expenses/** - Lists expenses (employees see their own, managers/finance see all with optional status filter)
+*   **POST /api/expenses/{expense\_id}/extract-amount** - Extracts amount from attached receipt using OCR
+*   **PUT /api/expenses/{expense\_id}** - Updates expense details (only if in SUBMITTED status)
+*   **DELETE /api/expenses/{expense\_id}** - Deletes an expense
+*   **POST /api/expenses/{expense\_id}/upload-bill** - Uploads additional bill/receipt for an expense
+*   **DELETE /api/expenses/{expense\_id}/attachment/{attachment\_id}** - Deletes a specific attachment from an expense
+*   **GET /api/expenses/{expense\_id}/validate-receipt** - Validates receipt genuineness with detailed risk analysis
+*   **GET /api/expenses/receipts/{attachment\_id}** - Returns receipt file information for viewing
+*   **GET /api/expenses/file/{file\_path}** - Serves the actual receipt file for download/viewing
+
+## Approval Workflow Endpoints (/api/approvals)
+
+*   **POST /api/approvals/manager/{expense\_id}/approve** - Manager approves an expense with optional comments
+*   **POST /api/approvals/manager/{expense\_id}/reject** - Manager rejects an expense with comments
+*   **POST /api/approvals/finance/{expense\_id}/approve** - Finance approves and marks expense as paid
+*   **POST /api/approvals/finance/{expense\_id}/reject** - Finance rejects an expense
+*   **GET /api/approvals/pending-manager** - Lists expenses pending manager approval
+*   **GET /api/approvals/{expense\_id}** - Retrieves all approval records for a specific expense
+*   **GET /api/approvals/finance/pending** - Lists expenses pending finance verification
+*   **POST /api/approvals/finance/{expense\_id}/verify-approve** - Finance approves expense after LLM verification
+*   **POST /api/approvals/finance/{expense\_id}/verify-reject** - Finance rejects expense after LLM verification
+*   **POST /api/approvals/finance/{expense\_id}/analyze-with-ai** - Analyzes expense bill genuineness using AI
+
+## Analytics Endpoints (/api/analytics)
+
+*   **GET /api/analytics/spending-by-category** - Returns spending breakdown by expense categories
+*   **GET /api/analytics/monthly-spending** - Returns monthly spending trends
+*   **GET /api/analytics/employee-spending** - Returns spending summary for each employee
+*   **GET /api/analytics/expense-status-distribution** - Returns distribution of expenses by status
+*   **GET /api/analytics/recent-expenses** - Returns list of most recent expenses
+
+## Finance Dashboard Endpoints (/api/finance)
+
+*   **GET /api/finance/employee-spending** - Returns detailed spending analytics for all employees (Finance role only)
+
 
 ## Useful Docker Commands
 
