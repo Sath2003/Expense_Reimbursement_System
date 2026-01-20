@@ -1,47 +1,448 @@
-# Expense Reimbursement System
+**\# 💼 Expense Reimbursement System**
 
-## Overview
+**\## 📖 Overview**
 
-The **Expense Reimbursement System** is a full‑stack web application designed to streamline employee expense submissions and approvals with a secure, auditable, and AI‑assisted workflow. The system supports receipt uploads (images and PDFs), multi‑level approvals (Manager → Finance), and optional AI‑based bill verification using Llama via Ollama.
+**The \*\*Expense Reimbursement System\*\* is a production‑ready, full‑stack web application that streamlines employee expense submissions, policy enforcement, multi‑level approvals, and real‑time notifications. It features AI‑assisted receipt validation, comprehensive audit trails, and role‑based access control.**
 
-This README consolidates all implementation and testing documentation into a single, practical guide.
+**\## ✨ Key Features**
 
-## Key Features
+**\- 🔐 \*\*Role‑based access\*\*: Employee, Manager, Finance, Admin**
 
-*   Role‑based access: **Employee, Manager, Finance, Admin**
-*   Secure authentication using JWT
-*   Expense submission with receipt upload (JPG, PNG, PDF)
-*   Receipt viewer with image/PDF preview
-*   Two‑tier approval workflow (Manager verification → Finance verification)
-*   AI‑powered bill genuineness analysis (optional)
-*   Bill expiration date validation (no DB changes required)
-*   Dockerized backend, database, and AI services
-*   Modern Next.js frontend
+**\- 📧 \*\*Email + In‑app Notifications\*\*: Real‑time alerts for submissions, approvals, rejections**
 
-## Tech Stack
+**\- 📋 \*\*Policy Enforcement\*\*: Grade‑wise spending limits with violation tracking**
 
-### Backend
+**\- 🧾 \*\*Smart Receipt Upload\*\*: OCR for images/PDFs with amount extraction**
 
-*   FastAPI (Python)
-*   SQLAlchemy ORM
-*   MySQL 8.0
-*   JWT Authentication
-*   OCR: Tesseract
-*   PDF Text Extraction: pdfplumber
-*   AI : Ollama + Llama models
+**\- 🤖 \*\*AI Bill Verification\*\*: Optional Llama‑based genuineness analysis**
 
-### Frontend
+**\- ✅ \*\*Multi‑level Approval\*\*: Manager → Finance workflow with comments**
 
-*   Next.js 13+
-*   React 18+
-*   Tailwind CSS
+**\- 📊 \*\*Analytics Dashboard\*\*: Real‑time spending insights for finance/HR**
 
-### DevOps
+**\- 🔄 \*\*Delegation Support\*\*: Managers can delegate approvals during absence**
 
-*   Docker & Docker Compose
-*   Volume‑based receipt storage (/app/bills)
+**\- 💳 \*\*Payment Tracking\*\*: Mark expenses as PAID with reimbursement workflow**
 
-## Project Structure (High Level)
+**\- 📱 \*\*Modern UI\*\*: Next.js frontend with Tailwind CSS**
+
+**\- 🐳 \*\*Dockerized\*\*: One‑command setup with backend, database, and AI services**
+
+**\## 🛠 Tech Stack**
+
+**\### Backend**
+
+**\- \*\*FastAPI\*\* (Python) with SQLAlchemy ORM**
+
+**\- \*\*MySQL 8.0\*\* with policy tables**
+
+**\- \*\*JWT Authentication\*\* with refresh tokens**
+
+**\- \*\*OCR\*\*: Tesseract + pdfplumber**
+
+**\- \*\*AI\*\*: Ollama + Llama models (optional)**
+
+**\- \*\*Email\*\*: SMTP for notifications**
+
+**\### Frontend**
+
+**\- \*\*Next.js 13+\*\* with React 18+**
+
+**\- \*\*Tailwind CSS\*\* for responsive design**
+
+**\- \*\*Chart.js\*\* for analytics visualizations**
+
+**\### DevOps**
+
+**\- \*\*Docker & Docker Compose\*\***
+
+**\- \*\*Volume‑based receipt storage\*\* (/app/bills)**
+
+**\---**
+
+**\## 🏗 Project Structure**
+
+**Expense\_Reimbursement\_System/ ├── backend/ │ ├── app/ │ │ ├── routes/ # API endpoints │ │ ├── services/ # Business logic │ │ ├── models/ # Database models │ │ ├── schemas/ # Pydantic schemas │ │ └── utils/ # Utilities │ └── Dockerfile ├── frontend/ │ ├── app/ │ │ ├── login/ │ │ ├── manager-dashboard/ │ │ ├── finance-dashboard/ │ │ ├── analytics/ │ │ └── notifications/ │ └── package.json ├── docker-compose.yml └── README.md**
+
+**\---**
+
+**\## 🔄 Workflow**
+
+**1\. \*\*Employee Submits Expense\*\***
+
+**\- Upload receipt (JPG/PNG/PDF)**
+
+**\- Policy check (grade limits)**
+
+**\- Status: \`SUBMITTED\`**
+
+**\- ✉️ Manager notified**
+
+**2\. \*\*Manager Review\*\***
+
+**\- View receipt preview**
+
+**\- Approve or reject with comments**
+
+**\- Status: \`MANAGER\_APPROVED\` / \`MANAGER\_REJECTED\`**
+
+**\- ✉️ Employee notified**
+
+**3\. \*\*Finance Review\*\***
+
+**\- Verify and approve payment**
+
+**\- Optional AI analysis**
+
+**\- Status: \`FINANCE\_APPROVED\` / \`FINANCE\_REJECTED\`**
+
+**\- ✉️ Employee notified**
+
+**4\. \*\*Payment Processing\*\***
+
+**\- Mark as \`PAID\`**
+
+**\- ✉️ Payment confirmation sent**
+
+**\---**
+
+**\## 🚀 Quick Start**
+
+**\### Prerequisites**
+
+**\- Docker Desktop**
+
+**\- Node.js 18+**
+
+**\- npm 9+**
+
+**\### 1. Clone & Start Backend**
+
+**\`\`\`bash**
+
+**git clone \[https://github.com/Sath2003/Expense\_Reimbursement\_System.git\](https://github.com/Sath2003/Expense\_Reimbursement\_System.git)**
+
+**cd Expense\_Reimbursement\_System**
+
+**docker-compose up -d --build**
+
+**2\. (Optional) Start AI**
+
+**bash**
+
+**ollama serve**
+
+**ollama pull llama3.1**
+
+**3\. Run Frontend**
+
+**bash**
+
+**cd frontend**
+
+**npm install**
+
+**npm run dev**
+
+**Frontend: http://localhost:3000**
+
+**Backend API: http://localhost:8000**
+
+**API Docs: http://localhost:8000/docs**
+
+**👥 Default Users**
+
+**Role Email Password Employee ID**
+
+**👨‍💼 Manager rajesh.kumar@expensemgmt.com Manager@2024 MGR-001**
+
+**💰 Finance priya.sharma@expensemgmt.com Finance@2024 FIN-001**
+
+**🔗 API Endpoints**
+
+**🔓 Authentication (/api/auth)**
+
+**POST /register – Register user + OTP**
+
+**POST /verify-otp – Verify email**
+
+**POST /login – Login (JWT)**
+
+**POST /refresh-token – Refresh access token**
+
+**GET /me – Current user profile**
+
+**POST /password-reset/request – Request reset OTP**
+
+**POST /password-reset/confirm – Confirm reset**
+
+**💸 Expenses (/api/expenses)**
+
+**POST /submit – Submit expense + receipt**
+
+**GET /{id} – Get expense details**
+
+**GET / – List expenses (role filtered)**
+
+**PUT /{id} – Update expense**
+
+**DELETE /{id} – Delete expense**
+
+**POST /{id}/upload-bill – Add receipt**
+
+**DELETE /{id}/attachment/{aid} – Remove receipt**
+
+**GET /receipts/{aid} – Receipt metadata**
+
+**GET /file/{path} – Download receipt file**
+
+**📋 Policy (/api/expenses/policy)**
+
+**GET /check?category\_id=&amount=&date= – Check policy compliance**
+
+**GET /user – Get user’s applicable policies**
+
+**✅ Approvals (/api/approvals)**
+
+**POST /manager/{id}/approve – Manager approve**
+
+**POST /manager/{id}/reject – Manager reject**
+
+**POST /finance/{id}/approve – Finance approve**
+
+**POST /finance/{id}/reject – Finance reject**
+
+**GET /pending-manager – Pending for manager**
+
+**GET /finance/pending – Pending for finance**
+
+**GET /{id} – Approval history**
+
+**🔔 Notifications (/api/notifications)**
+
+**GET / – List notifications**
+
+**GET /unread-count – Unread count**
+
+**POST /mark-read – Mark as read**
+
+**POST /mark-all-read – Mark all read**
+
+**📊 Analytics (/api/analytics)**
+
+**GET /spending – Org spending trends**
+
+**GET /spending-by-category – Category breakdown**
+
+**GET /monthly-spending – Monthly trends**
+
+**GET /employee-spending – Per‑employee summary**
+
+**GET /expense-status-distribution – Status distribution**
+
+**GET /recent-expenses – Latest expenses**
+
+**💰 Finance (/api/finance)**
+
+**GET /employee-spending – Detailed analytics (Finance only)**
+
+**GET /stats – Finance dashboard stats**
+
+**🏠 System**
+
+**GET / – API info**
+
+**GET /health – Health check**
+
+**📧 Notification Events**
+
+**Event Trigger Recipient Channel**
+
+**Expense Submitted Employee submits Manager Email + In‑app**
+
+**Expense Approved Manager approves Employee Email + In‑app**
+
+**Expense Rejected Manager/Finance rejects Employee Email + In‑app**
+
+**Payment Processed Finance marks PAID Employee Email + In‑app**
+
+**📋 Policy Enforcement**
+
+**Grade‑wise limits (e.g., Grade A: ₹50,000 travel, ₹2,000 daily food)**
+
+**Frequency checks (daily/monthly/per trip)**
+
+**Violations stored but submission allowed (configurable)**
+
+**Frontend warnings before submission**
+
+**🤖 AI Verification (Optional)**
+
+**Enable in docker-compose.yml:**
+
+**yaml**
+
+**OLLAMA\_ENABLED=True**
+
+**OLLAMA\_URL=http://ollama:11434**
+
+**OLLAMA\_MODEL=llama3.1**
+
+**OLLAMA\_STRICT=False**
+
+**Features:**
+
+**Genuineness score (0–100%)**
+
+**Risk level (LOW/MEDIUM/HIGH)**
+
+**Flaw detection**
+
+**Approval recommendation**
+
+**🔧 Useful Docker Commands**
+
+**bash**
+
+**\# View logs**
+
+**docker logs expense\_backend -f**
+
+**\# Stop services**
+
+**docker-compose down**
+
+**\# Stop + remove volumes**
+
+**docker-compose down -v**
+
+**\# Rebuild backend**
+
+**docker-compose up -d --build expense\_backend**
+
+**🐛 Troubleshooting**
+
+**Issue Fix**
+
+**Receipt not loading Check /app/bills volume and permissions**
+
+**PDF not rendering Verify file validity and CORS**
+
+**AI analysis failing Ensure Ollama is running and reachable**
+
+**Port 3306 error Stop local MySQL service**
+
+**Notifications not sending Check SMTP settings in .env**
+
+**📈 What’s New**
+
+**✅ Recently Added**
+
+**📋 Policy Enforcement with grade‑wise limits**
+
+**🔔 Notification System (email + in‑app)**
+
+**📊 Enhanced Analytics with real‑time charts**
+
+**🔄 Approval Delegation (coming next)**
+
+**💳 Payment Workflow (coming next)**
+
+**📄 License**
+
+**MIT License – see LICENSE file for details.**
+
+**🤝 Contributing**
+
+**Fork the repo**
+
+**Create feature branch (git checkout -b feature/amazing)**
+
+**Commit (git commit -m 'Add amazing feature')**
+
+**Push (git push origin feature/amazing)**
+
+**Open a Pull Request**
+
+**📞 Support**
+
+**For issues or questions:**
+
+**📧 Create an Issue on GitHub**
+
+**💬 Start a Discussion**
+
+**Happy expensing! 🎉**
+
+**Feedback submitted**
+
+**I need everything as a whole code with numberings and partition**
+
+**markdown**
+
+**\# 💼 Expense Reimbursement System**
+
+**\## 1️⃣ 📖 Overview**
+
+**The \*\*Expense Reimbursement System\*\* is a production‑ready, full‑stack web application that streamlines employee expense submissions, policy enforcement, multi‑level approvals, and real‑time notifications. It features AI‑assisted receipt validation, comprehensive audit trails, and role‑based access control.**
+
+**\## 2️⃣ ✨ Key Features**
+
+**\- 🔐 \*\*Role‑based access\*\*: Employee, Manager, Finance, Admin**
+
+**\- 📧 \*\*Email + In‑app Notifications\*\*: Real‑time alerts for submissions, approvals, rejections**
+
+**\- 📋 \*\*Policy Enforcement\*\*: Grade‑wise spending limits with violation tracking**
+
+**\- 🧾 \*\*Smart Receipt Upload\*\*: OCR for images/PDFs with amount extraction**
+
+**\- 🤖 \*\*AI Bill Verification\*\*: Optional Llama‑based genuineness analysis**
+
+**\- ✅ \*\*Multi‑level Approval\*\*: Manager → Finance workflow with comments**
+
+**\- 📊 \*\*Analytics Dashboard\*\*: Real‑time spending insights for finance/HR**
+
+**\- 🔄 \*\*Delegation Support\*\*: Managers can delegate approvals during absence**
+
+**\- 💳 \*\*Payment Tracking\*\*: Mark expenses as PAID with reimbursement workflow**
+
+**\- 📱 \*\*Modern UI\*\*: Next.js frontend with Tailwind CSS**
+
+**\- 🐳 \*\*Dockerized\*\*: One‑command setup with backend, database, and AI services**
+
+**\## 3️⃣ 🛠 Tech Stack**
+
+**\### Backend**
+
+**\- \*\*FastAPI\*\* (Python) with SQLAlchemy ORM**
+
+**\- \*\*MySQL 8.0\*\* with policy tables**
+
+**\- \*\*JWT Authentication\*\* with refresh tokens**
+
+**\- \*\*OCR\*\*: Tesseract + pdfplumber**
+
+**\- \*\*AI\*\*: Ollama + Llama models (optional)**
+
+**\- \*\*Email\*\*: SMTP for notifications**
+
+**\### Frontend**
+
+**\- \*\*Next.js 13+\*\* with React 18+**
+
+**\- \*\*Tailwind CSS\*\* for responsive design**
+
+**\- \*\*Chart.js\*\* for analytics visualizations**
+
+**\### DevOps**
+
+**\- \*\*Docker & Docker Compose\*\***
+
+**\- \*\*Volume‑based receipt storage\*\* (/app/bills)**
+
+**\---**
+
+**\## 4️⃣ 🏗 Project Structure**
 
 Expense\_Reimbursement\_System/  
 ├── backend/  
@@ -62,197 +463,309 @@ Expense\_Reimbursement\_System/
 ├── docker-compose.yml  
 └── README.md
 
-## Approval & Verification Workflow
 
-1.  **Employee Submits Expense**
-    *   Uploads receipt
-    *   Status: SUBMITTED
-2.  **Manager Review**
-    *   Views receipt in modal (image or PDF)
-    *   Approves for verification or rejects
-    *   Status: MANAGER\_APPROVED\_FOR\_VERIFICATION or MANAGER\_REJECTED
-3.  **Finance Review**
-    *   Views receipt again
-    *   Runs AI bill analysis (optional)
-    *   Final decision
-    *   Status: FINANCE\_APPROVED or FINANCE\_REJECTED
-4.  **Payment (Optional)**
-    *   Approved expenses can be marked as PAID
+**\## 5️⃣ 🔄 Workflow**
 
-## Receipt Viewer
+**1\. \*\*Employee Submits Expense\*\***
 
-*   Works for **Managers and Finance users**
-*   Supports:
-    *   Images (JPG, PNG, GIF)
-    *   PDFs (iframe preview)
-*   Secure file serving with path validation
-*   Download option available
+**\- Upload receipt (JPG/PNG/PDF)**
 
-Receipts are stored inside the backend container at:
+**\- Policy check (grade limits)**
 
-/app/bills/YYYY/MM/
+**\- Status: \`SUBMITTED\`**
 
-## AI Bill Verification (Optional)
+**\- ✉️ Manager notified**
 
-When enabled, Finance users can analyze receipts using Llama AI.
+**2\. \*\*Manager Review\*\***
 
-### AI Capabilities
+**\- View receipt preview**
 
-*   Genuineness score (0–100%)
-*   Risk level (LOW / MEDIUM / HIGH)
-*   Flaw detection
-*   Rejection reasons
-*   Recommendation (Approve / Review / Reject)
+**\- Approve or reject with comments**
 
-### Requirements
+**\- Status: \`MANAGER\_APPROVED\` / \`MANAGER\_REJECTED\`**
 
-*   Ollama installed and running
-*   Llama model pulled (e.g. llama3.1)
+**\- ✉️ Employee notified**
 
-Environment variables:
+**3\. \*\*Finance Review\*\***
 
-OLLAMA\_ENABLED=True  
-OLLAMA\_URL=http://host.docker.internal:11434  
-OLLAMA\_MODEL=llama3.1
+**\- Verify and approve payment**
 
-## Bill Expiration Validation
+**\- Optional AI analysis**
 
-*   Implemented fully in backend logic (no DB changes)
-*   Rules:
-    *   Current or previous month bills → valid until end of next month
-    *   Bills older than 2 months → automatically blocked
-*   Validation is integrated into AI evaluation flow
+**\- Status: \`FINANCE\_APPROVED\` / \`FINANCE\_REJECTED\`**
 
-## 🚀 Quick Start
+**\- ✉️ Employee notified**
 
-*   Docker Desktop (Windows / Mac / Linux)
-*   Node.js 18+
-*   npm 9+
+**4\. \*\*Payment Processing\*\***
 
-### Step 1: Clone Repository
+**\- Mark as \`PAID\`**
 
-git clone https://github.com/Sath2003/Expense_Reimbursement_System.git  
-cd Expense\_Reimbursement\_System
+**\- ✉️ Payment confirmation sent**
 
-### Step 2: Start Backend & Database (Docker)
+**\---**
 
-\# Build and start all backend services  
--- docker-compose up -d --build
+**\## 6️⃣ 🚀 Quick Start**
 
-Verify containers:
+**\### Prerequisites**
 
--- docker ps
+**\- Docker Desktop**
 
--- Expected containers: - expense\_backend - expense\_db
+**\- Node.js 18+**
 
-### Step 3: (Optional) Start Ollama for AI Verification
+**\- npm 9+**
 
--- ollama serve  
--- ollama pull llama3.1
+**\### 6.1️⃣ Clone & Start Backend**
 
-### Step 4: Run Frontend
+**\`\`\`bash**
 
--- cd frontend  
--- npm install  
--- npm run dev
+**git clone \[https://github.com/Sath2003/Expense\_Reimbursement\_System.git\](https://github.com/Sath2003/Expense\_Reimbursement\_System.git)**
 
-Frontend will run at:
+**cd Expense\_Reimbursement\_System**
 
-http://localhost:3000
+**docker-compose up -d --build**
 
-## 🔐 Default Users
+**6.2️⃣ (Optional) Start AI**
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Manager | manager@expensehub.com | Manager@123 |
-| Finance | finance@expensehub.com | Finance@123 |
+**bash**
 
-## 🔥 Key API Endpoints
+**ollama serve**
 
-## Root Endpoints (from main.py)
+**ollama pull llama3.1**
 
-*   **GET /** - Returns API information including version and docs URL
-*   **GET /health** - Health check endpoint that returns system status
+**6.3️⃣ Run Frontend**
 
-## Authentication Endpoints (/api/auth)
+**bash**
 
-*   **POST /api/auth/register** - Registers a new user and sends OTP for email verification
-*   **POST /api/auth/verify-otp** - Verifies OTP code to activate user account
-*   **POST /api/auth/login** - Authenticates user with email/password and returns access/refresh tokens
-*   **POST /api/auth/refresh-token** - Refreshes access token using refresh token
-*   **GET /api/auth/me** - Returns current authenticated user's profile information
+**cd frontend**
 
-## Expense Management Endpoints (/api/expenses)
+**npm install**
 
-*   **POST /api/expenses/submit** - Submits a new expense with optional receipt upload and AI validation
-*   **GET /api/expenses/{expense\_id}** - Retrieves detailed information for a specific expense
-*   **GET /api/expenses/** - Lists expenses (employees see their own, managers/finance see all with optional status filter)
-*   **POST /api/expenses/{expense\_id}/extract-amount** - Extracts amount from attached receipt using OCR
-*   **PUT /api/expenses/{expense\_id}** - Updates expense details (only if in SUBMITTED status)
-*   **DELETE /api/expenses/{expense\_id}** - Deletes an expense
-*   **POST /api/expenses/{expense\_id}/upload-bill** - Uploads additional bill/receipt for an expense
-*   **DELETE /api/expenses/{expense\_id}/attachment/{attachment\_id}** - Deletes a specific attachment from an expense
-*   **GET /api/expenses/{expense\_id}/validate-receipt** - Validates receipt genuineness with detailed risk analysis
-*   **GET /api/expenses/receipts/{attachment\_id}** - Returns receipt file information for viewing
-*   **GET /api/expenses/file/{file\_path}** - Serves the actual receipt file for download/viewing
+**npm run dev**
 
-## Approval Workflow Endpoints (/api/approvals)
+**Frontend: http://localhost:3000**
 
-*   **POST /api/approvals/manager/{expense\_id}/approve** - Manager approves an expense with optional comments
-*   **POST /api/approvals/manager/{expense\_id}/reject** - Manager rejects an expense with comments
-*   **POST /api/approvals/finance/{expense\_id}/approve** - Finance approves and marks expense as paid
-*   **POST /api/approvals/finance/{expense\_id}/reject** - Finance rejects an expense
-*   **GET /api/approvals/pending-manager** - Lists expenses pending manager approval
-*   **GET /api/approvals/{expense\_id}** - Retrieves all approval records for a specific expense
-*   **GET /api/approvals/finance/pending** - Lists expenses pending finance verification
-*   **POST /api/approvals/finance/{expense\_id}/verify-approve** - Finance approves expense after LLM verification
-*   **POST /api/approvals/finance/{expense\_id}/verify-reject** - Finance rejects expense after LLM verification
-*   **POST /api/approvals/finance/{expense\_id}/analyze-with-ai** - Analyzes expense bill genuineness using AI
+**Backend API: http://localhost:8000**
 
-## Analytics Endpoints (/api/analytics)
+**API Docs: http://localhost:8000/docs**
 
-*   **GET /api/analytics/spending-by-category** - Returns spending breakdown by expense categories
-*   **GET /api/analytics/monthly-spending** - Returns monthly spending trends
-*   **GET /api/analytics/employee-spending** - Returns spending summary for each employee
-*   **GET /api/analytics/expense-status-distribution** - Returns distribution of expenses by status
-*   **GET /api/analytics/recent-expenses** - Returns list of most recent expenses
+**7️⃣ 👥 Default Users**
 
-## Finance Dashboard Endpoints (/api/finance)
+**Role Email Password Employee ID**
 
-*   **GET /api/finance/employee-spending** - Returns detailed spending analytics for all employees (Finance role only)
+**👨‍💼 Manager rajesh.kumar@expensemgmt.com Manager@2024 MGR-001**
 
+**💰 Finance priya.sharma@expensemgmt.com Finance@2024 FIN-001**
 
-## Useful Docker Commands
+**8️⃣ 🔗 API Endpoints**
 
-\# View logs  
-docker logs expense\_backend -f  
-  
-\# Stop all services  
-docker-compose down  
-  
-\# Stop and remove volumes  
-docker-compose down -v
+**8.1️⃣ 🔓 Authentication (/api/auth)**
 
-## Troubleshooting
+**POST /register – Register user + OTP**
 
-*   **Receipt not loading**: Check /app/bills volume and file permissions
-*   **PDF not rendering**: Verify file validity and CORS headers
-*   **AI analysis failing**: Ensure Ollama is running and reachable
-*   **Port 3306 error**: MySQL already running locally – stop local service
+**POST /verify-otp – Verify email**
 
-## Documentation Consolidated
+**POST /login – Login (JWT)**
 
-This README consolidates the following internal documents: - Receipt Viewer (Implementation & Quick Start) - Bill Preview & AI Verification - Bill Expiration Validation - Verification Workflow
+**POST /refresh-token – Refresh access token**
 
-## Status
+**GET /me – Current user profile**
 
-✅ Backend: Complete & tested  
-✅ Frontend: Core dashboards implemented  
-✅ Receipt Viewer: Complete  
-✅ AI Verification: Integrated & optional
+**POST /password-reset/request – Request reset OTP**
 
-## Final Notes
+**POST /password-reset/confirm – Confirm reset**
 
-This project is production‑ready from a backend perspective and suitable for further UI/UX refinement, notification integration, and enterprise policy customization.
+**8.2️⃣ 💸 Expenses (/api/expenses)**
 
-For any future enhancements, refer to service‑level documentation inside the backend services/ directory.
+**POST /submit – Submit expense + receipt**
+
+**GET /{id} – Get expense details**
+
+**GET / – List expenses (role filtered)**
+
+**PUT /{id} – Update expense**
+
+**DELETE /{id} – Delete expense**
+
+**POST /{id}/upload-bill – Add receipt**
+
+**DELETE /{id}/attachment/{aid} – Remove receipt**
+
+**GET /receipts/{aid} – Receipt metadata**
+
+**GET /file/{path} – Download receipt file**
+
+**8.3️⃣ 📋 Policy (/api/expenses/policy)**
+
+**GET /check?category\_id=&amount=&date= – Check policy compliance**
+
+**GET /user – Get user’s applicable policies**
+
+**8.4️⃣ ✅ Approvals (/api/approvals)**
+
+**POST /manager/{id}/approve – Manager approve**
+
+**POST /manager/{id}/reject – Manager reject**
+
+**POST /finance/{id}/approve – Finance approve**
+
+**POST /finance/{id}/reject – Finance reject**
+
+**GET /pending-manager – Pending for manager**
+
+**GET /finance/pending – Pending for finance**
+
+**GET /{id} – Approval history**
+
+**8.5️⃣ 🔔 Notifications (/api/notifications)**
+
+**GET / – List notifications**
+
+**GET /unread-count – Unread count**
+
+**POST /mark-read – Mark as read**
+
+**POST /mark-all-read – Mark all read**
+
+**8.6️⃣ 📊 Analytics (/api/analytics)**
+
+**GET /spending – Org spending trends**
+
+**GET /spending-by-category – Category breakdown**
+
+**GET /monthly-spending – Monthly trends**
+
+**GET /employee-spending – Per‑employee summary**
+
+**GET /expense-status-distribution – Status distribution**
+
+**GET /recent-expenses – Latest expenses**
+
+**8.7️⃣ 💰 Finance (/api/finance)**
+
+**GET /employee-spending – Detailed analytics (Finance only)**
+
+**GET /stats – Finance dashboard stats**
+
+**8.8️⃣ 🏠 System**
+
+**GET / – API info**
+
+**GET /health – Health check**
+
+**9️⃣ 📧 Notification Events**
+
+**Event Trigger Recipient Channel**
+
+**Expense Submitted Employee submits Manager Email + In‑app**
+
+**Expense Approved Manager approves Employee Email + In‑app**
+
+**Expense Rejected Manager/Finance rejects Employee Email + In‑app**
+
+**Payment Processed Finance marks PAID Employee Email + In‑app**
+
+**🔟 📋 Policy Enforcement**
+
+**Grade‑wise limits (e.g., Grade A: ₹50,000 travel, ₹2,000 daily food)**
+
+**Frequency checks (daily/monthly/per trip)**
+
+**Violations stored but submission allowed (configurable)**
+
+**Frontend warnings before submission**
+
+**1️⃣1️⃣ 🤖 AI Verification (Optional)**
+
+**Enable in docker-compose.yml:**
+
+**yaml**
+
+**OLLAMA\_ENABLED=True**
+
+**OLLAMA\_URL=http://ollama:11434**
+
+**OLLAMA\_MODEL=llama3.1**
+
+**OLLAMA\_STRICT=False**
+
+**Features:**
+
+**Genuineness score (0–100%)**
+
+**Risk level (LOW/MEDIUM/HIGH)**
+
+**Flaw detection**
+
+**Approval recommendation**
+
+**1️⃣2️⃣ 🔧 Useful Docker Commands**
+
+**bash**
+
+**\# View logs**
+
+**docker logs expense\_backend -f**
+
+**\# Stop services**
+
+**docker-compose down**
+
+**\# Stop + remove volumes**
+
+**docker-compose down -v**
+
+**\# Rebuild backend**
+
+**docker-compose up -d --build expense\_backend**
+
+**1️⃣3️⃣ 🐛 Troubleshooting**
+
+**Issue Fix**
+
+**Receipt not loading Check /app/bills volume and permissions**
+
+**PDF not rendering Verify file validity and CORS**
+
+**AI analysis failing Ensure Ollama is running and reachable**
+
+**Port 3306 error Stop local MySQL service**
+
+**Notifications not sending Check SMTP settings in .env**
+
+**1️⃣4️⃣ 📈 What’s New**
+
+**✅ Recently Added**
+
+**📋 Policy Enforcement with grade‑wise limits**
+
+**🔔 Notification System (email + in‑app)**
+
+**📊 Enhanced Analytics with real‑time charts**
+
+**🔄 Approval Delegation (coming next)**
+
+**💳 Payment Workflow (coming next)**
+
+**1️⃣5️⃣ 📄 License**
+
+**MIT License – see LICENSE file for details.**
+
+**1️⃣6️⃣ 🤝 Contributing**
+
+**Fork the repo**
+
+**Create feature branch (git checkout -b feature/amazing)**
+
+**Commit (git commit -m 'Add amazing feature')**
+
+**Push (git push origin feature/amazing)**
+
+**Open a Pull Request**
+
+**1️⃣7️⃣ 📞 Support**
+
+**For issues or questions:**
+
+**📧 Create an Issue on GitHub**
+
+**💬 Start a Discussion**
