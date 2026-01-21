@@ -148,93 +148,60 @@ npm run dev
 
 ## 8️⃣ 🔗 API Endpoints
 
-### 8.1️⃣ 🔐 Authentication (`/api/auth`)
+### 1️⃣ 🔐 Authentication (`/api/auth`)
 
-| Method | Endpoint                   | Description              |
-|--------|----------------------------|--------------------------|
-| POST   | `/register`                | Register user + OTP      |
-| POST   | `/verify-otp`              | Verify email             |
-| POST   | `/login`                   | Login (JWT)              |
-| POST   | `/refresh-token`           | Refresh access token     |
-| GET    | `/me`                      | Current user profile     |
-| POST   | `/password-reset/request`  | Request reset OTP        |
-| POST   | `/password-reset/confirm`  | Confirm reset            |
-
-### 8.2️⃣ 💸 Expenses (`/api/expenses`)
-
-| Method | Endpoint                      | Description                  |
-|--------|-------------------------------|------------------------------|
-| POST   | `/submit`                     | Submit expense + receipt     |
-| GET    | `/{id}`                       | Get expense details          |
-| GET    | `/`                           | List expenses (role filtered)|
-| PUT    | `/{id}`                       | Update expense               |
-| POST   | `/{id}/upload-bill`           | Add receipt                  |
-| GET    | `/receipts/{aid}`             | Receipt metadata             |
-| GET    | `/file/{path}`                | Download receipt file        |
-
-### 8.3️⃣ 📋 Policy (`/api/expenses/policy`)
-
-| Method | Endpoint | Description                    |
-|--------|----------|--------------------------------|
-| GET    | `/check?category_id=&amount=&date=` | Check policy compliance |
-| GET    | `/user`  | Get user's applicable policies |
-
-### 8.4️⃣ ✅ Approvals (`/api/approvals`)
-
-| Method | Endpoint                    | Description              |
-|--------|-----------------------------|--------------------------|
-| POST   | `/manager/{id}/approve`     | Manager approve          |
-| POST   | `/manager/{id}/reject`      | Manager reject           |
-| POST   | `/finance/{id}/approve`     | Finance approve          |
-| POST   | `/finance/{id}/reject`      | Finance reject           |
-| GET    | `/pending-manager`          | Pending for manager      |
-| GET    | `/finance/pending`          | Pending for finance      |
-| GET    | `/{id}`                     | Approval history         |
-
-### 8.5️⃣ 🔔 Notifications (`/api/notifications`)
-
-| Method | Endpoint           | Description          |
-|--------|--------------------|----------------------|
-| GET    | `/`                | List notifications   |
-| GET    | `/unread-count`    | Unread count         |
-| POST   | `/mark-read`       | Mark as read         |
-| POST   | `/mark-all-read`   | Mark all read        |
-
-### 8.6️⃣ 📊 Analytics (`/api/analytics`)
-
-| Method | Endpoint                        | Description                  |
-|--------|---------------------------------|------------------------------|
-| GET    | `/spending`                     | Org spending trends          |
-| GET    | `/spending-by-category`         | Category breakdown           |
-| GET    | `/monthly-spending`             | Monthly trends               |
-| GET    | `/employee-spending`            | Per-employee summary         |
-| GET    | `/expense-status-distribution`  | Status distribution          |
-| GET    | `/recent-expenses`              | Latest expenses              |
-
-### 8.7️⃣ 💰 Finance (`/api/finance`)
-
-| Method | Endpoint              | Description                           |
-|--------|-----------------------|---------------------------------------|
-| GET    | `/employee-spending`  | Detailed analytics (Finance only)     |
-| GET    | `/stats`              | Finance dashboard stats               |
-
-### 8.8️⃣ 🏠 System
-
-| Method | Endpoint   | Description    |
-|--------|------------|----------------|
-| GET    | `/`        | API info       |
-| GET    | `/health`  | Health check   |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/register` | Register user + OTP |
+| POST | `/verify-otp` | Verify email (OTP) |
+| POST | `/login` | Login (JWT) |
+| POST | `/password-reset/request` | Request reset OTP |
+| POST | `/password-reset/confirm` | Confirm reset |
 
 ---
 
-## 9️⃣ 📧 Notification Events
+### 2️⃣ 💸 Expenses (`/api/expenses`)
 
-| Event                | Trigger                    | Recipient | Channel            |
-|----------------------|----------------------------|-----------|--------------------|
-| Expense Submitted    | Employee submits           | Manager   | Email + In-app     |
-| Expense Approved     | Manager approves           | Employee  | Email + In-app     |
-| Expense Rejected     | Manager/Finance rejects    | Employee  | Email + In-app     |
-| Payment Processed    | Finance marks PAID         | Employee  | Email + In-app     |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/submit` | Submit expense + receipt |
+| GET | `/` | List expenses (role filtered) |
+| PUT | `/{id}` | Update expense |
+| GET | `/receipts/{aid}` | Receipt metadata |
+| GET | `/file/{path}` | Download receipt file |
+
+---
+
+### 3️⃣ ✅ Approvals (`/api/approvals`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/pending-manager` | Pending for manager |
+| POST | `/manager/{id}/approve` | Manager approve |
+| POST | `/manager/{id}/reject` | Manager reject |
+| GET | `/finance/pending` | Pending for finance |
+| POST | `/finance/{id}/approve` | Finance approve |
+| POST | `/finance/{id}/reject` | Finance reject |
+| POST | `/finance/{id}/analyze-with-ai` | Analyze bill with AI (Finance) |
+| POST | `/finance/{id}/verify-approve` | Finance approve after verification |
+| POST | `/finance/{id}/verify-reject` | Finance reject after verification |
+
+---
+
+### 4️⃣ 📊 Analytics (`/api/analytics`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/spending?period=...` | Org spending trends |
+
+---
+
+### 5️⃣ 🏠 System
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check |
+| GET | `/api/` | API info (debug page only) |
 
 ---
 
