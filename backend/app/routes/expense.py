@@ -7,12 +7,14 @@ from app.schemas.expense import (
 )
 from app.services.expense_service import ExpenseService
 from app.services.approval_service import ApprovalService
+from app.services.notification_service import NotificationService
 from app.utils.file_handler import FileHandler
 from app.utils.receipt_extractor import ReceiptExtractor
 from app.utils.improved_receipt_extractor import ImprovedReceiptExtractor
 from app.services.receipt_validation_service import ReceiptValidationService
 from app.services.expense_cross_check_service import ExpenseCrossCheckService
 from app.services.llm_receipt_agent import LLMReceiptAgent
+from app.services.policy_service import PolicyService
 from app.utils.audit_logger import AuditLogger
 from app.utils.dependencies import get_current_user
 from app.models.expense import Expense, ExpenseAttachment
@@ -20,12 +22,61 @@ from app.models.user import User
 from typing import List
 from datetime import datetime
 import os
+from decimal import Decimal
+import os
 import tempfile
 import logging
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/expenses", tags=["expenses"])
+
+@router.get("/policy/check")
+async def check_policy(
+    category_id: int,
+    amount: float,
+    date: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Check if an expense complies with policy before submission
+    """
+    try:
+        from datetime import datetime
+        expense_date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid date format. Use YYYY-MM-DD"
+        )
+    
+    policy_result = PolicyService.check_expense_policy(
+        db=db,
+        user=current_user,
+        category_id=category_id,
+        amount=Decimal(str(amount)),
+        expense_date=expense_date_obj,
+        transport_type_id=None
+    )
+    
+    return {
+        "is_compliant": policy_result.is_compliant,
+        "violations": policy_result.violations,
+        "allowed_amount": float(policy_result.allowed_amount) if policy_result.allowed_amount else None,
+        "policy_details": policy_result.policy_details
+    }
+
+@router.get("/policy/user")
+async def get_user_policies(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all applicable policies for the current user
+    """
+    policies = PolicyService.get_user_policies(db, current_user)
+    return {"policies": policies}
 
 @router.post("/submit")
 async def submit_expense(
@@ -102,16 +153,20 @@ async def submit_expense(
         extraction_note = ""
         extraction_confidence = "none"
         
-        if amount:
+        parsed_amount = None
+        if amount is not None and str(amount).strip() != "":
             try:
-                amount_value = float(amount)
+                parsed_amount = float(amount)
             except (ValueError, TypeError):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Invalid amount provided"
                 )
+
+        if parsed_amount is not None and parsed_amount > 0:
+            amount_value = parsed_amount
         else:
-            # Receipt is provided - try to extract amount from it
+            # Receipt is provided (or amount is 0/blank) - try to extract amount from it
             if receipt and receipt.filename:
                 try:
                     # Save receipt temporarily to extract amount
@@ -264,6 +319,43 @@ async def submit_expense(
             expense_date=date  # This is the date the expense was incurred
         )
         
+        # Policy Enforcement Check
+        try:
+            expense_date_obj = datetime.strptime(date, '%Y-%m-%d').date()
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid date format. Use YYYY-MM-DD"
+            )
+        
+        policy_result = PolicyService.check_expense_policy(
+            db=db,
+            user=current_user,
+            category_id=category_id,
+            amount=Decimal(str(amount_value)),
+            expense_date=expense_date_obj,
+            transport_type_id=None  # TODO: Add transport_type_id if needed
+        )
+        
+        if not policy_result.is_compliant:
+            # Store policy violations in expense record
+            policy_check_result = {
+                "is_compliant": False,
+                "violations": policy_result.violations,
+                "allowed_amount": float(policy_result.allowed_amount) if policy_result.allowed_amount else None,
+                "policy_details": policy_result.policy_details
+            }
+            # We'll still allow submission but mark as POLICY_EXCEPTION
+            expense_data.policy_check_result = policy_check_result
+            print(f"[POLICY] Violations: {policy_result.violations}")
+        else:
+            policy_check_result = {
+                "is_compliant": True,
+                "violations": [],
+                "policy_details": policy_result.policy_details
+            }
+            expense_data.policy_check_result = policy_check_result
+        
         # Create expense
         expense, error = ExpenseService.create_expense(
             db=db,
@@ -301,6 +393,34 @@ async def submit_expense(
                 db.add(expense_attachment)
                 db.commit()
                 print(f"Receipt saved for expense {expense.id}: {receipt.filename}")
+
+                # If amount is still placeholder (0), attempt extraction from the saved file
+                try:
+                    current_amount = float(expense.amount or 0)
+                except Exception:
+                    current_amount = 0
+
+                if current_amount == 0:
+                    extracted_after_save, conf_after_save, note_after_save = ImprovedReceiptExtractor.extract_amount(
+                        file_path,
+                        file_type
+                    )
+                    if extracted_after_save and extracted_after_save > 0:
+                        old_amount = expense.amount
+                        expense.amount = extracted_after_save
+                        expense.updated_at = datetime.utcnow()
+                        db.commit()
+                        db.refresh(expense)
+
+                        AuditLogger.log(
+                            db=db,
+                            entity_type="expense",
+                            entity_id=expense.id,
+                            action="amount_extracted_from_receipt",
+                            performed_by=current_user.id,
+                            old_value={"amount": str(old_amount)},
+                            new_value={"amount": str(extracted_after_save), "confidence": conf_after_save, "note": note_after_save}
+                        )
             except Exception as file_err:
                 # Log error but don't fail the expense submission
                 print(f"File upload error: {file_err}")
@@ -309,6 +429,13 @@ async def submit_expense(
         # Create approval records - for both manager and HR
         ApprovalService.submit_for_manager_approval(db=db, expense_id=expense.id)
         ApprovalService.submit_for_hr_approval(db=db, expense_id=expense.id)
+        
+        # Notify manager about new expense
+        await NotificationService.notify_expense_submitted(
+            db=db,
+            expense=expense,
+            employee=current_user
+        )
         
         # Refresh expense to ensure attachments are loaded
         db.refresh(expense)
@@ -562,174 +689,6 @@ async def update_expense(
         )
     
     return updated_expense
-
-@router.delete("/{expense_id}")
-async def delete_expense(
-    expense_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Delete expense"""
-    expense = ExpenseService.get_expense(db, expense_id)
-    
-    if not expense:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Expense not found"
-        )
-    
-    if expense.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only delete your own expenses"
-        )
-    
-    success, error = ExpenseService.delete_expense(
-        db=db,
-        expense_id=expense_id,
-        performed_by=current_user.id
-    )
-    
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=error
-        )
-    
-    return {"message": "Expense deleted successfully"}
-
-@router.post("/{expense_id}/upload-bill")
-async def upload_bill(
-    expense_id: int,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Upload bill/receipt for expense"""
-    expense = ExpenseService.get_expense(db, expense_id)
-    
-    if not expense:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Expense not found"
-        )
-    
-    if expense.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only upload bills for your own expenses"
-        )
-    
-    try:
-        # Save file
-        file_path, file_hash, file_size, file_type = await FileHandler.save_file(
-            file=file,
-            expense_id=expense_id
-        )
-        
-        # Create attachment record
-        attachment = ExpenseAttachment(
-            expense_id=expense_id,
-            file_name=file.filename,
-            file_path=file_path,
-            file_type=file_type,
-            file_size=file_size,
-            file_hash=file_hash
-        )
-        
-        db.add(attachment)
-        
-        # Log action
-        AuditLogger.log(
-            db=db,
-            entity_type="attachment",
-            entity_id=0,  # Will be set after flush
-            action="uploaded",
-            performed_by=current_user.id,
-            new_value={
-                "file_name": file.filename,
-                "file_type": file_type,
-                "file_size": file_size
-            }
-        )
-        
-        db.commit()
-        db.refresh(attachment)
-        
-        return {
-            "attachment_id": attachment.id,
-            "file_name": attachment.file_name,
-            "file_size": attachment.file_size,
-            "message": "Bill uploaded successfully"
-        }
-    
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error uploading file: {str(e)}"
-        )
-
-@router.delete("/{expense_id}/attachment/{attachment_id}")
-async def delete_attachment(
-    expense_id: int,
-    attachment_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Delete attachment"""
-    expense = ExpenseService.get_expense(db, expense_id)
-    
-    if not expense:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Expense not found"
-        )
-    
-    if expense.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only delete your own attachments"
-        )
-    
-    attachment = db.query(ExpenseAttachment).filter(
-        ExpenseAttachment.id == attachment_id,
-        ExpenseAttachment.expense_id == expense_id
-    ).first()
-    
-    if not attachment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Attachment not found"
-        )
-    
-    try:
-        # Delete file
-        FileHandler.delete_file(attachment.file_path)
-        
-        # Log action
-        AuditLogger.log(
-            db=db,
-            entity_type="attachment",
-            entity_id=attachment_id,
-            action="deleted",
-            performed_by=current_user.id
-        )
-        
-        # Delete record
-        db.delete(attachment)
-        db.commit()
-        
-        return {"message": "Attachment deleted successfully"}
-    
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error deleting attachment: {str(e)}"
-        )
 
 @router.get("/{expense_id}/validate-receipt", response_model=dict)
 async def validate_expense_receipt(

@@ -157,7 +157,7 @@ export default function MyExpenses() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-100 to-blue-50 p-8 relative overflow-hidden">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#e0f2fe,_#f8fafc_45%,_#eef2ff)] p-8 relative overflow-hidden">
       <style>{`
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(20px); }
@@ -168,8 +168,9 @@ export default function MyExpenses() {
       
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-0 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-        <div className="absolute bottom-20 left-0 w-96 h-96 bg-cyan-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
+        <div className="absolute -top-10 right-10 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-10 left-0 w-[28rem] h-[28rem] bg-indigo-400/20 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/3 left-1/2 w-64 h-64 bg-cyan-300/20 rounded-full blur-3xl"></div>
       </div>
 
       <div className="max-w-5xl mx-auto relative z-10">
@@ -185,19 +186,19 @@ export default function MyExpenses() {
           
           {/* Current User Display */}
           {currentUser && (
-            <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-blue-50 border-2 border-blue-300 rounded-xl p-6 shadow-soft-md flex-1 max-w-2xl">
+            <div className="bg-white/70 border border-blue-200 rounded-2xl p-6 shadow-lg backdrop-blur-xl flex-1 max-w-2xl">
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">Logged In As</p>
-                  <p className="text-2xl font-bold text-blue-900">
+                  <p className="text-2xl font-bold text-slate-900">
                     {currentUser.first_name && currentUser.last_name 
                       ? `${currentUser.first_name} ${currentUser.last_name}` 
                       : currentUser.email}
                   </p>
                 </div>
-                <div className="border-l border-blue-300 pl-6">
+                <div className="border-l border-blue-200 pl-6">
                   <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">👔 Role</p>
-                  <p className="text-2xl font-bold text-blue-900 capitalize">{currentUser.designation || 'Employee'}</p>
+                  <p className="text-2xl font-bold text-slate-900 capitalize">{currentUser.designation || 'Employee'}</p>
                 </div>
               </div>
             </div>
@@ -223,25 +224,25 @@ export default function MyExpenses() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white/5 border border-green-400/30 rounded-2xl p-6">
-            <div className="text-5xl mb-4">✅</div>
-            <p className="text-green-300 text-base font-semibold mb-2">Approved</p>
-            <p className="text-5xl font-bold text-green-400">₹{stats.approved.toLocaleString('en-IN')}</p>
+          <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50 border border-emerald-200 rounded-2xl p-6 shadow-md">
+            <div className="text-4xl mb-3">✅</div>
+            <p className="text-emerald-700 text-sm font-semibold uppercase tracking-wider">Approved</p>
+            <p className="text-4xl font-black text-emerald-800 mt-2">₹{stats.approved.toLocaleString('en-IN')}</p>
           </div>
-          <div className="bg-white/5 border border-yellow-400/30 rounded-2xl p-6">
-            <div className="text-5xl mb-4">⏳</div>
-            <p className="text-yellow-300 text-base font-semibold mb-2">Pending</p>
-            <p className="text-5xl font-bold text-yellow-400">₹{stats.pending.toLocaleString('en-IN')}</p>
+          <div className="bg-gradient-to-br from-amber-50 via-white to-amber-50 border border-amber-200 rounded-2xl p-6 shadow-md">
+            <div className="text-4xl mb-3">⏳</div>
+            <p className="text-amber-700 text-sm font-semibold uppercase tracking-wider">Pending</p>
+            <p className="text-4xl font-black text-amber-800 mt-2">₹{stats.pending.toLocaleString('en-IN')}</p>
           </div>
-          <div className="bg-white/5 border border-red-400/30 rounded-2xl p-6">
-            <div className="text-5xl mb-4">❌</div>
-            <p className="text-red-300 text-base font-semibold mb-2">Rejected</p>
-            <p className="text-5xl font-bold text-red-400">₹{stats.rejected.toLocaleString('en-IN')}</p>
+          <div className="bg-gradient-to-br from-rose-50 via-white to-rose-50 border border-rose-200 rounded-2xl p-6 shadow-md">
+            <div className="text-4xl mb-3">❌</div>
+            <p className="text-rose-700 text-sm font-semibold uppercase tracking-wider">Rejected</p>
+            <p className="text-4xl font-black text-rose-800 mt-2">₹{stats.rejected.toLocaleString('en-IN')}</p>
           </div>
         </div>
 
         {/* Expenses Table */}
-        <div className="bg-white/5 backdrop-blur-md border border-white/20 rounded-2xl overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-xl border border-white/40 rounded-2xl overflow-hidden shadow-lg">
           {loading ? (
             <div className="p-8 text-center text-slate-700">
               <div className="flex justify-center mb-4">
@@ -261,16 +262,16 @@ export default function MyExpenses() {
             </div>
           ) : (
             <table className="w-full">
-              <thead className="bg-white/10 border-b border-white/20">
+              <thead className="bg-slate-900/90 border-b border-slate-800">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-white">Date</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-white">Category</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-white">Description</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-white">Amount</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-white">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-slate-100">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-slate-100">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-slate-100">Description</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-slate-100">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-widest text-slate-100">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/10">
+              <tbody className="divide-y divide-slate-200">
                 {expenses.map((expense, idx) => {
                   // Map category_id to category name (must match backend category_map in expense.py)
                   const categoryMap: Record<number, string> = {
@@ -294,17 +295,17 @@ export default function MyExpenses() {
                   console.log(`Expense ${expense.id}: amount=${expense.amount}, parsedAmount=${parsedAmount}, hasZeroAmount=${hasZeroAmount}`);
                   
                   return (
-                    <tr key={expense.id || idx} className={`hover:bg-white/5 transition ${hasZeroAmount ? 'bg-yellow-500/20' : ''}`}>
+                    <tr key={expense.id || idx} className={`transition ${hasZeroAmount ? 'bg-amber-50' : 'hover:bg-slate-50'}`}>
                       <td className="px-6 py-4 text-sm text-slate-700">{expense.expense_date || 'N/A'}</td>
-                      <td className="px-6 py-4 text-sm text-slate-700">{categoryName}</td>
+                      <td className="px-6 py-4 text-sm text-slate-700 font-semibold">{categoryName}</td>
                       <td className="px-6 py-4 text-sm text-slate-700">
                         {expense.description || 'N/A'}
-                        {hasZeroAmount && <span className="block text-xs text-orange-400 font-semibold mt-1">⚠️ Amount pending</span>}
+                        {hasZeroAmount && <span className="block text-xs text-amber-600 font-semibold mt-1">⚠️ Amount pending</span>}
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-white">
+                      <td className="px-6 py-4 text-sm font-semibold text-slate-900">
                         {editingExpenseId === expense.id ? (
                           <div className="flex gap-2 items-center">
-                            <span className="text-blue-300">₹</span>
+                            <span className="text-blue-600">₹</span>
                             <input
                               type="number"
                               value={editingAmount}
@@ -313,7 +314,7 @@ export default function MyExpenses() {
                               min="0"
                               step="1"
                               autoFocus
-                              className="w-24 px-2 py-1 border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-800 text-white"
+                              className="w-24 px-2 py-1 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-slate-900"
                             />
                             <button
                               onClick={() => handleUpdateAmount(expense.id, editingAmount)}
@@ -333,13 +334,13 @@ export default function MyExpenses() {
                           </div>
                         ) : hasZeroAmount ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-orange-600 font-bold">⚠️ ₹0</span>
+                            <span className="text-amber-700 font-bold">⚠️ ₹0</span>
                             <button
                               onClick={() => {
                                 setEditingExpenseId(expense.id);
                                 setEditingAmount('');
                               }}
-                              className="bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded text-xs font-semibold"
+                              className="bg-amber-500 hover:bg-amber-600 text-white px-2 py-1 rounded text-xs font-semibold"
                             >
                               Update
                             </button>

@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
 from datetime import datetime, timedelta
-from typing import Optional
 from app.database import get_db
 from app.models.expense import Expense
 from app.models.user import User
@@ -10,11 +8,10 @@ from app.utils.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
-
 @router.get("/spending")
 async def get_spending_analytics(
     period: str = Query("month", regex="^(week|month|quarter|year)$"),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -26,8 +23,7 @@ async def get_spending_analytics(
     
     Returns analytics including top spenders, category breakdown, and metrics.
     """
-    # Check authorization
-    user_role = current_user.get("role", "").lower()
+    user_role = getattr(current_user.role, "role_name", "").lower() if current_user.role else ""
     if user_role not in ["hr", "manager", "finance"]:
         raise HTTPException(
             status_code=403,
@@ -46,13 +42,27 @@ async def get_spending_analytics(
     else:  # year
         start_date = today.replace(month=1, day=1)
 
-    # Query approved expenses within the period
+    # Query all expenses (not just approved) for comprehensive analytics
     expenses = db.query(Expense).filter(
-        and_(
-            Expense.expense_date >= start_date,
-            Expense.approval_status == "approved"
-        )
+        Expense.expense_date >= start_date
     ).all()
+
+    if not expenses:
+        return {
+            "period": period,
+            "start_date": start_date.isoformat(),
+            "end_date": today.isoformat(),
+            "total_amount": 0.0,
+            "expense_count": 0,
+            "average_amount": 0.0,
+            "unique_employees": 0,
+            "approval_rate": 0.0,
+            "top_spenders": [],
+            "category_breakdown": [],
+            "status_distribution": {"approved": 0, "pending": 0, "rejected": 0},
+            "monthly_trend": [],
+            "employee_spending": []
+        }
 
     # Calculate top spenders
     spender_data = {}
@@ -61,44 +71,44 @@ async def get_spending_analytics(
         if not user:
             continue
 
-        key = (user.id, user.name, user.department or "N/A")
+        key = (user.id, f"{user.first_name} {user.last_name}", user.employee_id or "N/A")
         if key not in spender_data:
             spender_data[key] = {
-                "total": 0,
+                "total": 0.0,
                 "count": 0,
-                "amounts": []
+                "approved": 0,
             }
         spender_data[key]["total"] += float(expense.amount)
         spender_data[key]["count"] += 1
-        spender_data[key]["amounts"].append(float(expense.amount))
+        if expense.status == "FINANCE_APPROVED":
+            spender_data[key]["approved"] += 1
 
     top_spenders = [
         {
-            "employee_id": user_id,
+            "employee_id": employee_id,
             "employee_name": name,
-            "department": department,
-            "total_spent": round(data["total"], 2),
+            "total_amount": round(data["total"], 2),
             "expense_count": data["count"],
-            "average_expense": round(data["total"] / data["count"], 2) if data["count"] > 0 else 0
+            "approved_count": data["approved"],
+            "approval_rate": (data["approved"] / data["count"] * 100) if data["count"] > 0 else 0
         }
-        for (user_id, name, department), data in spender_data.items()
+        for (_user_id, name, employee_id), data in spender_data.items()
     ]
-    top_spenders.sort(key=lambda x: x["total_spent"], reverse=True)
-    top_spenders = top_spenders[:10]  # Top 10
+    top_spenders.sort(key=lambda x: x["total_amount"], reverse=True)
 
-    # Calculate category breakdown
+    # Calculate category breakdown (using category name)
     category_data = {}
     for expense in expenses:
-        category = expense.category or "Uncategorized"
-        if category not in category_data:
-            category_data[category] = {"total": 0, "count": 0}
-        category_data[category]["total"] += float(expense.amount)
-        category_data[category]["count"] += 1
+        category_name = getattr(expense.category, "name", "Uncategorized") if expense.category else "Uncategorized"
+        if category_name not in category_data:
+            category_data[category_name] = {"total": 0.0, "count": 0}
+        category_data[category_name]["total"] += float(expense.amount)
+        category_data[category_name]["count"] += 1
 
-    total_amount = sum(e.amount for e in expenses)
+    total_amount = sum(float(e.amount) for e in expenses)
     category_breakdown = [
         {
-            "category_name": category,
+            "category": category,
             "total_amount": round(data["total"], 2),
             "count": data["count"],
             "percentage": round((data["total"] / total_amount * 100), 1) if total_amount > 0 else 0
@@ -107,20 +117,54 @@ async def get_spending_analytics(
     ]
     category_breakdown.sort(key=lambda x: x["total_amount"], reverse=True)
 
+    # Calculate status distribution
+    status_counts = {}
+    for expense in expenses:
+        status = expense.status or "UNKNOWN"
+        status_counts[status] = status_counts.get(status, 0) + 1
+
+    # Calculate monthly trend
+    monthly_data = {}
+    for expense in expenses:
+        month_key = expense.expense_date.strftime("%Y-%m")
+        if month_key not in monthly_data:
+            monthly_data[month_key] = 0.0
+        monthly_data[month_key] += float(expense.amount)
+
+    monthly_trend = [
+        {
+            "month": datetime.strptime(month, "%Y-%m").strftime("%b %Y"),
+            "total_amount": round(amount, 2)
+        }
+        for month, amount in sorted(monthly_data.items())
+    ]
+
     # Calculate overall metrics
     total_expenses = len(expenses)
-    total_spent = sum(e.amount for e in expenses)
-    average_expense = total_spent / total_expenses if total_expenses > 0 else 0
-    active_employees = len(set(e.user_id for e in expenses))
+    total_spent = sum(float(e.amount) for e in expenses)
+    average_expense = total_spent / total_expenses if total_expenses > 0 else 0.0
+    unique_employees = len(set(e.user_id for e in expenses))
+    approved_expenses = len([e for e in expenses if e.status == "FINANCE_APPROVED"])
+    approval_rate = (approved_expenses / total_expenses * 100) if total_expenses > 0 else 0.0
+
+    employee_spending = top_spenders if user_role in ["finance", "hr"] else None
 
     return {
-        "top_spenders": top_spenders,
-        "category_breakdown": category_breakdown,
-        "total_expenses": total_expenses,
-        "total_amount": round(total_spent, 2),
-        "average_expense": round(average_expense, 2),
-        "active_employees": active_employees,
         "period": period,
         "start_date": start_date.isoformat(),
-        "end_date": today.isoformat()
+        "end_date": today.isoformat(),
+        "total_amount": round(total_spent, 2),
+        "expense_count": total_expenses,
+        "average_amount": round(average_expense, 2),
+        "unique_employees": unique_employees,
+        "approval_rate": round(approval_rate, 2),
+        "top_spenders": top_spenders,
+        "category_breakdown": category_breakdown,
+        "status_distribution": {
+            "approved": status_counts.get("FINANCE_APPROVED", 0),
+            "pending": status_counts.get("SUBMITTED", 0) + status_counts.get("MANAGER_APPROVED", 0),
+            "rejected": status_counts.get("MANAGER_REJECTED", 0) + status_counts.get("FINANCE_REJECTED", 0)
+        },
+        "monthly_trend": monthly_trend,
+        "employee_spending": employee_spending
     }

@@ -292,6 +292,25 @@ CREATE TABLE IF NOT EXISTS designation_grade_mapping (
 
 SET FOREIGN_KEY_CHECKS = 1;
 
+-- =========================
+-- 18. NOTIFICATIONS
+-- =========================
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    type ENUM('INFO', 'SUCCESS', 'WARNING', 'ERROR') NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    entity_type VARCHAR(50),
+    entity_id INT,
+    
+    CONSTRAINT fk_notification_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 -- =====================================================================
 -- INSERT DEFAULT DATA
 -- =====================================================================
@@ -389,49 +408,6 @@ INSERT INTO transportation_policies (grade_id, transport_type_id, allowed_class,
 (3, 2, 'Second', 2000.00, 1),        -- Senior Staff - Train Second
 (4, 2, 'Second', 1000.00, 1)         -- Staff - Train Second
 ON DUPLICATE KEY UPDATE max_amount=VALUES(max_amount);
-
--- =====================================================================
--- INSERT SAMPLE USERS
--- =====================================================================
-
--- Admin User (password: senior@123)
-INSERT INTO users (first_name, last_name, email, phone_number, password, designation, department, employee_id, role_id, grade_id, is_active, is_verified) 
-VALUES ('Admin', 'User', 'admin@expensemgmt.com', '9876543210', '$2b$12$v0FixhBFJUD75jyxXVQ.leUkHg5pd9dXLQoRzvwv1B7tChlNbYnKu', 'System Administrator', 'Administration', 'EMP001', 4, 1, 1, 1)
-ON DUPLICATE KEY UPDATE is_verified=VALUES(is_verified);
-
--- Finance Manager (password: senior@123)
-INSERT INTO users (first_name, last_name, email, phone_number, password, designation, department, employee_id, role_id, grade_id, is_active, is_verified) 
-VALUES ('Priya', 'Sharma', 'priya.sharma@expensemgmt.com', '9123456789', '$2b$12$v0FixhBFJUD75jyxXVQ.leUkHg5pd9dXLQoRzvwv1B7tChlNbYnKu', 'Finance Manager', 'Finance', 'EMP002', 3, 2, 1, 1)
-ON DUPLICATE KEY UPDATE is_verified=VALUES(is_verified);
-
--- Department Manager (password: senior@123)
-INSERT INTO users (first_name, last_name, email, phone_number, password, designation, department, employee_id, role_id, grade_id, is_active, is_verified) 
-VALUES ('Rajesh', 'Kumar', 'rajesh.kumar@expensemgmt.com', '9234567890', '$2b$12$v0FixhBFJUD75jyxXVQ.leUkHg5pd9dXLQoRzvwv1B7tChlNbYnKu', 'Engineering Manager', 'Engineering', 'EMP003', 2, 2, 1, 1)
-ON DUPLICATE KEY UPDATE is_verified=VALUES(is_verified);
-
--- Senior Developer (password: senior@123) - Reports to Rajesh Kumar (ID: 3)
-INSERT INTO users (first_name, last_name, email, phone_number, password, designation, department, employee_id, role_id, grade_id, is_active, is_verified) 
-VALUES ('Amit', 'Patel', 'amit.patel@expensemgmt.com', '9345678901', '$2b$12$v0FixhBFJUD75jyxXVQ.leUkHg5pd9dXLQoRzvwv1B7tChlNbYnKu', 'Senior Developer', 'Engineering', 'EMP004', 1, 3, 1, 1)
-ON DUPLICATE KEY UPDATE is_verified=VALUES(is_verified);
-UPDATE users SET manager_id = 3 WHERE id = 4;
-
--- Junior Developer (password: senior@123) - Reports to Amit Patel (ID: 4)
-INSERT INTO users (first_name, last_name, email, phone_number, password, designation, department, employee_id, role_id, grade_id, is_active, is_verified) 
-VALUES ('Neha', 'Singh', 'neha.singh@expensemgmt.com', '9456789012', '$2b$12$v0FixhBFJUD75jyxXVQ.leUkHg5pd9dXLQoRzvwv1B7tChlNbYnKu', 'Junior Developer', 'Engineering', 'EMP005', 1, 4, 1, 1)
-ON DUPLICATE KEY UPDATE is_verified=VALUES(is_verified);
-UPDATE users SET manager_id = 4 WHERE id = 5;
-
--- Sales Executive (password: senior@123) - Reports to Rajesh Kumar (ID: 3)
-INSERT INTO users (first_name, last_name, email, phone_number, password, designation, department, employee_id, role_id, grade_id, is_active, is_verified) 
-VALUES ('Vikram', 'Desai', 'vikram.desai@expensemgmt.com', '9567890123', '$2b$12$v0FixhBFJUD75jyxXVQ.leUkHg5pd9dXLQoRzvwv1B7tChlNbYnKu', 'Sales Executive', 'Sales', 'EMP006', 1, 4, 1, 1)
-ON DUPLICATE KEY UPDATE is_verified=VALUES(is_verified);
-UPDATE users SET manager_id = 3 WHERE id = 6;
-
--- HR Specialist (password: senior@123) - Reports to Rajesh Kumar (ID: 3)
-INSERT INTO users (first_name, last_name, email, phone_number, password, designation, department, employee_id, role_id, grade_id, is_active, is_verified) 
-VALUES ('Anjali', 'Gupta', 'anjali.gupta@expensemgmt.com', '9678901234', '$2b$12$v0FixhBFJUD75jyxXVQ.leUkHg5pd9dXLQoRzvwv1B7tChlNbYnKu', 'HR Specialist', 'Human Resources', 'EMP007', 1, 4, 1, 1)
-ON DUPLICATE KEY UPDATE is_verified=VALUES(is_verified);
-UPDATE users SET manager_id = 3 WHERE id = 7;
 
 -- =====================================================================
 -- CREATE INDEXES FOR PERFORMANCE

@@ -11,27 +11,24 @@ type UserRole = 'employee' | 'manager' | 'finance' | null;
 const roleInfo = {
   employee: {
     title: '👤 Employee',
-    description: 'Register and submit your expenses',
-    email: '',
-    password: '',
-    features: ['Submit Expenses', 'View My Expenses', 'Download Reports'],
-    color: 'from-blue-500 to-blue-600'
+    email: 'sath21341@gmail.com',
+    password: 'Employee@123',
+    description: 'Submit expenses and track your reimbursement status',
+    features: ['Submit Expenses', 'Track Status', 'View History']
   },
   manager: {
     title: '👨‍💼 Manager',
-    description: 'Review and approve employee expenses',
-    email: 'manager@expensehub.com',
-    password: 'password123',
-    features: ['View All Expenses', 'Approve/Reject Bills', 'AI-Powered Analysis'],
-    color: 'from-purple-500 to-purple-600'
+    email: 'rajesh.kumar@expensemgmt.com',
+    password: 'Manager@2024',
+    description: 'Review and approve team expenses, access analytics',
+    features: ['Approve Expenses', 'Team Analytics', 'View Reports']
   },
   finance: {
     title: '💰 Finance',
-    description: 'Track employee spending and analytics',
-    email: 'sarah.johnson@expensehub.com',
-    password: 'password123',
-    features: ['Employee Spending Analytics', 'All Approvals', 'Reports & Insights'],
-    color: 'from-emerald-500 to-emerald-600'
+    email: 'priya.sharma@expensemgmt.com',
+    password: 'Finance@2024',
+    description: 'Final approval, payments, and comprehensive financial reports',
+    features: ['Final Approvals', 'Payment Processing', 'Financial Reports']
   }
 };
 
@@ -50,8 +47,8 @@ export default function Login() {
     if (role && roleInfo[role]) {
       setSelectedRole(role);
       setFormData({
-        email: roleInfo[role].email,
-        password: roleInfo[role].password,
+        email: role === 'employee' ? '' : roleInfo[role].email,
+        password: role === 'employee' ? '' : roleInfo[role].password,
       });
       setError('');
     }
@@ -201,7 +198,7 @@ export default function Login() {
               <p className="text-slate-600 mb-8 text-sm">{roleInfo[selectedRole].description}</p>
 
               {/* Demo Credentials - Only show for Manager and Finance */}
-              {selectedRole !== 'employee' && (
+              {selectedRole && selectedRole !== 'employee' && (
                 <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-6">
                   <p className="text-primary-900 text-sm font-semibold mb-3">Demo Credentials:</p>
                   <div className="space-y-2 text-xs text-primary-700">
@@ -268,6 +265,15 @@ export default function Login() {
                   {loading ? 'Signing in...' : 'Sign In'}
                 </button>
               </form>
+
+              <div className="text-right">
+                <Link
+                  href="/reset-password"
+                  className="text-sm text-primary-600 hover:text-primary-700 font-semibold transition"
+                >
+                  Forgot password?
+                </Link>
+              </div>
 
               <p className="text-center text-slate-600 text-sm mt-6">
                 Don't have an account?{' '}

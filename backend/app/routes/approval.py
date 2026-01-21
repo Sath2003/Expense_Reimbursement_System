@@ -4,6 +4,7 @@ from app.database import get_db
 from app.schemas.approval import ApprovalDecisionRequest, ApprovalListResponse
 from app.services.approval_service import ApprovalService
 from app.services.expense_service import ExpenseService
+from app.services.notification_service import NotificationService
 from app.utils.dependencies import get_current_user
 from app.models.user import User, RoleEnum
 from app.models.expense import ExpenseStatusEnum, Expense
@@ -47,6 +48,13 @@ async def manager_approve(
             detail=error
         )
     
+    # Send notification to employee
+    await NotificationService.notify_expense_approved(
+        db=db,
+        expense=expense,
+        approved_by=current_user
+    )
+    
     return {"message": "Expense approved successfully"}
 
 @router.post("/manager/{expense_id}/reject")
@@ -83,6 +91,14 @@ async def manager_reject(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=error
         )
+    
+    # Send notification to employee
+    await NotificationService.notify_expense_rejected(
+        db=db,
+        expense=expense,
+        rejected_by=current_user,
+        remarks=request.comments or "No remarks provided"
+    )
     
     return {"message": "Expense rejected successfully"}
 

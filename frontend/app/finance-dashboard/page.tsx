@@ -317,7 +317,7 @@ ${!analysis.analysis_available ? '⏳ AI ANALYSIS NOT AVAILABLE - MANUAL REVIEW 
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white p-8">
+    <div className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-indigo-50 p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-10">
@@ -330,32 +330,40 @@ ${!analysis.analysis_available ? '⏳ AI ANALYSIS NOT AVAILABLE - MANUAL REVIEW 
                 Review and validate approved expenses with AI-powered verification
               </p>
             </div>
-            <button
-              onClick={() => {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                router.push('/login');
-              }}
-              className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition shadow-soft text-sm"
-            >
-              Logout
-            </button>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/analytics"
+                className="px-6 py-2.5 bg-white hover:bg-slate-50 text-primary-900 font-semibold rounded-lg transition shadow-soft text-sm border border-slate-300"
+              >
+                Analytics
+              </Link>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('token');
+                  localStorage.removeItem('user');
+                  router.push('/login');
+                }}
+                className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition shadow-soft text-sm"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-soft-md">
+          <div className="bg-white/90 border border-slate-300 rounded-2xl p-6 shadow-xl ring-1 ring-black/5 hover:shadow-2xl transition">
             <div className="text-3xl mb-3">⏳</div>
             <p className="text-slate-600 text-sm font-semibold">Pending Verification</p>
             <p className="text-4xl font-bold text-primary-900 mt-1">{expenses.length}</p>
           </div>
-          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-soft-md">
+          <div className="bg-white/90 border border-slate-300 rounded-2xl p-6 shadow-xl ring-1 ring-black/5 hover:shadow-2xl transition">
             <div className="text-3xl mb-3">💰</div>
             <p className="text-slate-600 text-sm font-semibold">Total Amount</p>
             <p className="text-4xl font-bold text-accent-600 mt-1">₹{expenses.reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0).toFixed(0)}</p>
           </div>
-          <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-soft-md">
+          <div className="bg-white/90 border border-slate-300 rounded-2xl p-6 shadow-xl ring-1 ring-black/5 hover:shadow-2xl transition">
             <div className="text-3xl mb-3">🤖</div>
             <p className="text-slate-600 text-sm font-semibold">AI Ready</p>
             <p className="text-4xl font-bold text-secondary-600 mt-1">{expenses.length}</p>

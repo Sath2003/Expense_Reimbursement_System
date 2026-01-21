@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import Integer, cast, func
 from app.models.user import User, Role, EmployeeGrade, RoleEnum
 from app.schemas.user import UserRegisterRequest
 from app.utils.security import hash_password, verify_password, generate_otp
@@ -36,9 +37,16 @@ class UserService:
         otp_code = generate_otp()
         otp_expires_at = datetime.utcnow() + timedelta(minutes=1)
         
-        # Generate employee ID (sequential from 2)
-        last_employee = db.query(User).filter(User.role_id == employee_role.id).order_by(User.id.desc()).first()
-        next_id = 2 if last_employee is None else int(last_employee.employee_id[3:]) + 1
+        # Generate employee ID (sequential, always unique)
+        # NOTE: We compute this across all users (not just EMPLOYEE role) because demo/admin accounts
+        # may already have EMP### values, and filtering by role can cause duplicates after DB cleanup.
+        max_emp_num = (
+            db.query(func.max(cast(func.substring(User.employee_id, 4), Integer)))
+            .filter(User.employee_id.isnot(None))
+            .filter(User.employee_id.like("EMP%"))
+            .scalar()
+        )
+        next_id = (max_emp_num or 0) + 1
         employee_id = f"EMP{next_id:03d}"  # EMP001, EMP002, EMP003, etc.
         
         # Create user
@@ -115,6 +123,56 @@ class UserService:
         except Exception as e:
             db.rollback()
             return None, f"Error verifying OTP: {str(e)}"
+
+    @staticmethod
+    def request_password_reset(db: Session, email: str) -> Tuple[Optional[User], Optional[str]]:
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            return None, "User not found"
+
+        otp_code = generate_otp()
+        otp_expires_at = datetime.utcnow() + timedelta(minutes=10)
+
+        user.otp_code = otp_code
+        user.otp_expires_at = otp_expires_at
+
+        try:
+            db.commit()
+            db.refresh(user)
+            return user, None
+        except Exception as e:
+            db.rollback()
+            return None, f"Error generating reset OTP: {str(e)}"
+
+    @staticmethod
+    def reset_password(db: Session, email: str, otp_code: str, new_password: str, confirm_password: str) -> Optional[str]:
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            return "User not found"
+
+        if new_password != confirm_password:
+            return "Passwords do not match"
+
+        if not user.otp_code:
+            return "OTP not generated. Please request a new OTP"
+
+        if user.otp_code != otp_code:
+            return "Invalid OTP code"
+
+        if user.otp_expires_at and user.otp_expires_at < datetime.utcnow():
+            return "OTP has expired. Please request a new OTP"
+
+        user.password = hash_password(new_password)
+        user.otp_code = None
+        user.otp_expires_at = None
+
+        try:
+            db.commit()
+            db.refresh(user)
+            return None
+        except Exception as e:
+            db.rollback()
+            return f"Error updating password: {str(e)}"
     
     @staticmethod
     def authenticate_user(db: Session, email: str, password: str) -> Tuple[Optional[User], Optional[str]]:

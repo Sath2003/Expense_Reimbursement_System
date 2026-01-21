@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "mysql+pymysql://expense_user:expense_password@expense_db:3306/expense_reimbursement_db"
+        "mysql+pymysql://expense_user:expense_password@localhost:3308/expense_reimbursement_db"
     )
     
     # JWT

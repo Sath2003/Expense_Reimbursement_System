@@ -77,23 +77,26 @@ class ImprovedReceiptExtractor:
     # Comprehensive patterns for Indian currency amounts
     AMOUNT_PATTERNS = [
         # TIER 1: EXPLICIT RUPEE SYMBOL - HIGHEST PRIORITY (must have ₹ or Rs)
-        (r'₹\s*([\d,]+\.\d{2})', 'rupee_symbol_decimal'),  # ₹156.00
-        (r'₹\s*([1-9]\d{0,4}(?:\.\d{2})?)', 'rupee_symbol'),  # ₹156
-        (r'Rs\.?\s*([\d,]+\.\d{2})', 'rs_abbrev_decimal'),  # Rs156.00
-        (r'Rs\.?\s*([1-9]\d{0,4}(?:\.\d{2})?)', 'rs_abbrev'),  # Rs156
-        (r'INR\s*([\d,]+\.\d{2})', 'inr_code_decimal'),  # INR 156.00
-        (r'INR\s*([1-9]\d{0,4}(?:\.\d{2})?)', 'inr_code'),  # INR 156
+        (r'₹\s*([\d,]+\.\d{1,2})', 'rupee_symbol_decimal'),  # ₹156.00 / ₹156.0
+        (r'₹\s*([1-9]\d{0,6}(?:\.\d{1,2})?)', 'rupee_symbol'),  # ₹156
+        (r'Rs\.?\s*([\d,]+\.\d{1,2})', 'rs_abbrev_decimal'),  # Rs156.00 / Rs156.0
+        (r'Rs\.?\s*([1-9]\d{0,6}(?:\.\d{1,2})?)', 'rs_abbrev'),  # Rs156
+        (r'INR\s*([\d,]+\.\d{1,2})', 'inr_code_decimal'),  # INR 156.00 / INR 156.0
+        (r'INR\s*([1-9]\d{0,6}(?:\.\d{1,2})?)', 'inr_code'),  # INR 156
         
         # TIER 2: TOTAL/AMOUNT KEYWORDS WITH RUPEE (must have keyword + currency indicator)
         (r'(?:total\s+(?:amount|paid|fare|price)|amount\s+paid|final\s+amount|grand\s+total|net\s+amount|bill\s+amount|sub\s+total)[\s:]*₹\s*([\d,]+\.?\d*)', 'total_rupee_final'),
         (r'(?:total|amount|price|cost|due|payable|net|fare|bill)[\s:]*₹\s*([\d,]+\.?\d*)', 'total_rupee'),
+
+        # TIER 2B: TOTAL KEYWORDS WITHOUT CURRENCY (common in tables like "Total 1349")
+        (r'(?:grand\s+total|net\s+total|total)\s*[:\-]?\s*([1-9]\d{0,6}(?:\.\d{1,2})?)', 'total_no_currency'),
         
         # TIER 3: TEXT KEYWORDS + CURRENCY WORDS (very explicit)
-        (r'(?:total|amount|price|cost|due|payable|fare|paid|bill|sum|charge)\s+(?:is|:|=)?\s*(?:Rs|rupees?|INR)\s*[\.]?\s*([\d,]+\.\d{2})', 'text_total'),
-        (r'rupees?\s+([\d,]+\.\d{2})', 'rupees_text'),
+        (r'(?:total|amount|price|cost|due|payable|fare|paid|bill|sum|charge)\s+(?:is|:|=)?\s*(?:Rs|rupees?|INR)\s*[\.]?\s*([\d,]+\.\d{1,2})', 'text_total'),
+        (r'rupees?\s+([\d,]+\.\d{1,2})', 'rupees_text'),
         
         # TIER 4: AMOUNTS STRICTLY WITH CURRENCY SYMBOL NEARBY
-        (r'([\d,]+\.\d{2})\s*(?:Rs|INR|₹)', 'table_amount'),
+        (r'([\d,]+\.\d{1,2})\s*(?:Rs|INR|₹)', 'table_amount'),
         
         # NOTE: All patterns without explicit currency context removed
         # This prevents UPI IDs and other numbers from being extracted
@@ -130,11 +133,16 @@ class ImprovedReceiptExtractor:
             if len(clean_digits) > 5:
                 return None
         
-        # If decimal exists, validate it's a reasonable amount (not just appended decimal)
+        # If decimal exists, accept 1-2 decimals (OCR often misses a digit)
         if '.' in amount_str:
             parts = amount_str.split('.')
-            if len(parts[1]) != 2:  # Should have exactly 2 decimal places
+            if len(parts) != 2:
                 return None
+            decimals = parts[1]
+            if len(decimals) == 1:
+                amount_str = f"{parts[0]}.{decimals}0"
+            elif len(decimals) > 2:
+                amount_str = f"{parts[0]}.{decimals[:2]}"
         
         # Handle Indian numbering (1,00,000) vs Western (100,000)
         if ',' in amount_str:
@@ -189,6 +197,7 @@ class ImprovedReceiptExtractor:
             with pdfplumber.open(file_path) as pdf:
                 full_text = ""
                 page_count = 0
+                table_totals: List[float] = []
                 
                 for page in pdf.pages:
                     page_count += 1
@@ -201,11 +210,27 @@ class ImprovedReceiptExtractor:
                         tables = page.extract_tables()
                         for table in tables:
                             for row in table:
+                                row_text = " ".join([c for c in row if isinstance(c, str)])
+                                if row_text and re.search(r'\b(total|grand\s+total|net\s+total)\b', row_text, re.IGNORECASE):
+                                    for cell in row:
+                                        if cell and isinstance(cell, str):
+                                            match = re.search(r'([1-9]\d{0,6}(?:\.\d{2})?)', cell.replace(',', ''))
+                                            if match:
+                                                try:
+                                                    value = float(match.group(1))
+                                                    if value >= 10:
+                                                        table_totals.append(value)
+                                                except ValueError:
+                                                    pass
                                 for cell in row:
                                     if cell and isinstance(cell, str):
                                         full_text += cell + " "
                     except:
                         pass
+
+                if table_totals:
+                    final_amount = max(table_totals)
+                    return final_amount, "high", f"PDF table total detected: ₹{final_amount:.2f}"
                 
                 # If no text extracted, try OCR as fallback
                 if not full_text.strip() and PYTESSERACT_SUPPORT:

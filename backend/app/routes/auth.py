@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.schemas.user import (
     UserRegisterRequest, UserRegisterResponse, VerifyOTPRequest,
-    LoginRequest, TokenResponse, RefreshTokenRequest, UserProfileResponse
+    LoginRequest, TokenResponse, RefreshTokenRequest, UserProfileResponse,
+    PasswordResetRequest, PasswordResetConfirmRequest
 )
 from app.services.user_service import UserService
 from app.utils.security import create_access_token, create_refresh_token, verify_token
@@ -51,6 +52,38 @@ async def verify_otp(data: VerifyOTPRequest, db: Session = Depends(get_db)):
         "is_verified": user.is_verified,
         "id": user.id
     }
+
+@router.post("/password-reset/request")
+async def request_password_reset(data: PasswordResetRequest, db: Session = Depends(get_db)):
+    """
+    Request password reset OTP
+    """
+    user, error = UserService.request_password_reset(db, data.email)
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+
+    success, message = await UserService.send_otp(db, user)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=message)
+
+    return {"message": message, "email": user.email}
+
+@router.post("/password-reset/confirm")
+async def confirm_password_reset(data: PasswordResetConfirmRequest, db: Session = Depends(get_db)):
+    """
+    Verify OTP and update password
+    """
+    error = UserService.reset_password(
+        db,
+        data.email,
+        data.otp_code,
+        data.new_password,
+        data.confirm_password
+    )
+    if error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+
+    return {"message": "Password updated successfully"}
 
 @router.post("/login", response_model=TokenResponse)
 async def login(credentials: LoginRequest, db: Session = Depends(get_db)):

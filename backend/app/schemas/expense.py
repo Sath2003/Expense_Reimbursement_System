@@ -10,6 +10,7 @@ class ExpenseCreate(BaseModel):
     amount: Decimal = Field(..., ge=0, description="Expense amount (can be 0 if receipt is provided)")
     expense_date: date = Field(..., description="Date of expense")
     description: str = Field(..., min_length=5, description="Expense description")
+    policy_check_result: Optional[dict] = Field(None, description="Policy check results")
 
 class ExpenseUpdate(BaseModel):
     amount: Optional[Decimal] = Field(None, ge=0)

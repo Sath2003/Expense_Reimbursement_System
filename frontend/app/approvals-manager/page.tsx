@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { apiCall } from '@/utils/api';
 
 interface Expense {
@@ -26,6 +26,7 @@ interface User {
 
 export default function ApprovalsManager() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -53,6 +54,14 @@ export default function ApprovalsManager() {
       }
       
       setUserRole(user.role_id);
+
+      const expenseIdParam = searchParams.get('expenseId');
+      if (expenseIdParam) {
+        const parsed = Number(expenseIdParam);
+        if (!Number.isNaN(parsed)) {
+          setExpandedExpenseId(parsed);
+        }
+      }
       
       // Only show to Managers (role_id 2) and Finance (role_id 3)
       if (user.role_id === 2 || user.role_id === 3) {
@@ -87,8 +96,8 @@ export default function ApprovalsManager() {
         console.error('Invalid user data:', user);
         return;
       }
-      
-      const endpoint = '/expenses';
+
+      const endpoint = user.role_id === 3 ? '/approvals/finance/pending' : '/approvals/pending-manager';
       
       const response = await apiCall(endpoint, {
         method: 'GET',
@@ -100,18 +109,9 @@ export default function ApprovalsManager() {
 
       const data = await response.json();
       console.log('Fetched expenses:', data);
-      
-      // For Finance users (role_id 3), the data is already filtered. For others, filter SUBMITTED expenses
-      if (user.role_id === 3) {
-        // Extract expense data from approval records
-        const expenseList = Array.isArray(data) ? data.map((approval: any) => approval.expense) : [];
-        setExpenses(expenseList);
-      } else {
-        // Filter for SUBMITTED expenses only (pending approval)
-        const expenseList = Array.isArray(data) ? data : data.items || [];
-        const pendingExpenses = expenseList.filter((e: Expense) => e.status === 'SUBMITTED');
-        setExpenses(pendingExpenses);
-      }
+
+      const expenseList = Array.isArray(data) ? data : data.items || data.data || [];
+      setExpenses(expenseList);
     } catch (err) {
       console.error('Error fetching expenses:', err);
       setError('Failed to load expenses for approval');
@@ -133,16 +133,24 @@ export default function ApprovalsManager() {
         console.error('Invalid user data for approval:', user);
         return;
       }
-      
-      const endpoint = `/approvals/manager/${expenseId}/approve`;
+
+      const endpoint = user.role_id === 3
+        ? `/approvals/finance/${expenseId}/approve`
+        : `/approvals/manager/${expenseId}/approve`;
       
       const response = await apiCall(endpoint, {
         method: 'POST',
-        body: JSON.stringify({ decision: 'APPROVED', comments: 'Approved by manager' })
+        body: JSON.stringify({
+          decision: 'APPROVED',
+          comments: user.role_id === 3 ? 'Approved by finance' : 'Approved by manager'
+        })
       });
       
       if (response.ok) {
-        alert('✅ Expense approved for verification! Sent to Finance department.');
+        alert(user.role_id === 3
+          ? '✅ Expense approved successfully!'
+          : '✅ Expense approved for verification! Sent to Finance department.'
+        );
         await fetchExpenses();
       } else {
         const error = await response.json();
@@ -171,12 +179,17 @@ export default function ApprovalsManager() {
         console.error('Invalid user data for rejection:', user);
         return;
       }
-      
-      const endpoint = `/approvals/manager/${expenseId}/reject`;
+
+      const endpoint = user.role_id === 3
+        ? `/approvals/finance/${expenseId}/reject`
+        : `/approvals/manager/${expenseId}/reject`;
       
       const response = await apiCall(endpoint, {
         method: 'POST',
-        body: JSON.stringify({ decision: 'REJECTED', comments: 'Rejected by manager' })
+        body: JSON.stringify({
+          decision: 'REJECTED',
+          comments: user.role_id === 3 ? 'Rejected by finance' : 'Rejected by manager'
+        })
       });
       
       if (response.ok) {
@@ -258,14 +271,13 @@ export default function ApprovalsManager() {
               <div className="bg-white border border-secondary-200 rounded-2xl p-6 shadow-soft-md">
                 <div className="text-3xl mb-2">⏳</div>
                 <p className="text-secondary-700 text-sm">Pending Review</p>
-                <p className="text-4xl font-bold text-secondary-600">{expenses.filter(e => e.status === 'SUBMITTED').length}</p>
+                <p className="text-4xl font-bold text-secondary-600">{expenses.length}</p>
               </div>
               <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-soft-md">
                 <div className="text-3xl mb-2">💰</div>
                 <p className="text-slate-600 text-sm">Total Pending Amount</p>
                 <p className="text-3xl font-bold text-primary-700">
                   ₹{expenses
-                    .filter(e => e.status === 'SUBMITTED')
                     .reduce((sum, e) => sum + (typeof e.amount === 'string' ? parseFloat(e.amount) : e.amount || 0), 0)
                     .toLocaleString('en-IN')}
                 </p>
@@ -274,7 +286,7 @@ export default function ApprovalsManager() {
                 <div className="text-3xl mb-2">👤</div>
                 <p className="text-slate-600 text-sm">Your Role</p>
                 <p className="text-3xl font-bold text-primary-600">
-                  {userRole === 2 ? 'Manager' : 'Manager'}
+                  {userRole === 2 ? 'Manager' : 'Finance'}
                 </p>
               </div>
             </div>

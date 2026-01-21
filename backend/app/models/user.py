@@ -57,5 +57,6 @@ class User(Base):
     
     role = relationship("Role", back_populates="users")
     grade = relationship("EmployeeGrade", back_populates="users")
+    notifications = relationship("Notification", back_populates="user")
     expenses = relationship("Expense", back_populates="employee")
     approvals = relationship("ExpenseApproval", back_populates="approved_by_user")

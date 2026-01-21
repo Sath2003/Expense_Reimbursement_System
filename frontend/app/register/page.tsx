@@ -16,6 +16,7 @@ export default function Register() {
     department: '',
     designation: '',
   });
+  const [countryCode, setCountryCode] = useState('+91');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -104,7 +105,7 @@ export default function Register() {
           first_name: formData.first_name,
           last_name: formData.last_name,
           email: formData.email,
-          phone_number: formData.phone_number,
+          phone_number: `${countryCode} ${formData.phone_number}`.trim(),
           password: formData.password,
           department: formData.department,
           designation: formData.designation,
@@ -142,7 +143,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center p-4">
-      <div className="bg-white border border-slate-200 rounded-xl shadow-soft-lg p-8 w-full max-w-md">
+      <div className="bg-white border border-slate-200 rounded-xl shadow-soft-lg p-8 w-full max-w-xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-primary-900 mb-2">
             Create Account
@@ -201,14 +202,29 @@ export default function Register() {
             <label className="block text-primary-900 font-semibold mb-2 text-sm">
               Phone Number
             </label>
-            <input
-              type="tel"
-              name="phone_number"
-              value={formData.phone_number}
-              onChange={handleChange}
-              placeholder="+91 98765 43210"
-              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition text-sm"
-            />
+            <div className="flex gap-3">
+              <select
+                name="country_code"
+                value={countryCode}
+                onChange={(e) => setCountryCode(e.target.value)}
+                className="w-40 px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition text-sm"
+              >
+                <option value="+91">IN (+91)</option>
+                <option value="+1">US (+1)</option>
+                <option value="+44">UK (+44)</option>
+                <option value="+61">AU (+61)</option>
+                <option value="+971">UAE (+971)</option>
+                <option value="+65">SG (+65)</option>
+              </select>
+              <input
+                type="tel"
+                name="phone_number"
+                value={formData.phone_number}
+                onChange={handleChange}
+                placeholder="9876543210"
+                className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition text-sm"
+              />
+            </div>
           </div>
 
           <div>

@@ -4,6 +4,43 @@ from email.mime.multipart import MIMEMultipart
 from app.config import settings
 from typing import Tuple
 
+async def send_email(to_email: str, subject: str, body: str) -> bool:
+    """
+    Send a generic email
+    
+    Args:
+        to_email: Recipient email address
+        subject: Email subject
+        body: Email body (HTML or plain text)
+    
+    Returns:
+        True if email sent successfully, False otherwise
+    """
+    try:
+        message = MIMEMultipart("alternative")
+        message["Subject"] = subject
+        message["From"] = settings.SMTP_EMAIL
+        message["To"] = to_email
+        
+        # Attach body (assume HTML if contains HTML tags, otherwise plain text)
+        if '<' in body and '>' in body:
+            message.attach(MIMEText(body, "html"))
+        else:
+            message.attach(MIMEText(body, "plain"))
+        
+        # Send email
+        with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT) as server:
+            server.starttls()
+            server.login(settings.SMTP_EMAIL, settings.SMTP_PASSWORD)
+            server.send_message(message)
+        
+        print(f"Email sent successfully to {to_email}")
+        return True
+        
+    except Exception as e:
+        print(f"Failed to send email to {to_email}: {str(e)}")
+        return False
+
 async def send_otp_email(email: str, otp_code: str, first_name: str) -> bool:
     """
     Send OTP verification email

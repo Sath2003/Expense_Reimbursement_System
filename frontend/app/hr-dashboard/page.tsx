@@ -82,26 +82,64 @@ export default function HRDashboard() {
     }
   };
 
+  const getStatusGroup = (status: string) => {
+    const s = (status || '').toUpperCase();
+
+    const pending = [
+      'SUBMITTED',
+      'POLICY_EXCEPTION',
+      'PENDING_MANAGER_REVIEW',
+      'PENDING_FINANCE_REVIEW',
+      'MANAGER_APPROVED_FOR_VERIFICATION'
+    ];
+    const approved = ['FINANCE_APPROVED', 'PAID', 'HR_APPROVED', 'MANAGER_APPROVED'];
+    const rejected = ['MANAGER_REJECTED', 'FINANCE_REJECTED', 'HR_REJECTED'];
+
+    if (pending.some(v => s.includes(v))) return 'pending';
+    if (approved.some(v => s.includes(v))) return 'approved';
+    if (rejected.some(v => s.includes(v))) return 'rejected';
+    return 'other';
+  };
+
   const getStatusColor = (status: string) => {
     const colors: { [key: string]: string } = {
       pending: 'bg-yellow-100 text-yellow-800',
       approved: 'bg-green-100 text-green-800',
       rejected: 'bg-red-100 text-red-800',
-      submitted: 'bg-blue-100 text-blue-800'
+      other: 'bg-blue-100 text-blue-800'
     };
-    return colors[status?.toLowerCase()] || 'bg-gray-100 text-gray-800';
+
+    const group = getStatusGroup(status);
+    return colors[group] || 'bg-gray-100 text-gray-800';
   };
 
-  const filteredExpenses = filterStatus === 'all' 
-    ? expenses 
-    : expenses.filter(e => e.status?.toLowerCase() === filterStatus.toLowerCase());
+  const parseAmount = (value: unknown) => {
+    const n = typeof value === 'number' ? value : parseFloat(String(value ?? 0));
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const formatInr = (value: number) => {
+    return value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const isCompanySpent = (status: string) => {
+    const s = (status || '').toUpperCase();
+    return s.includes('FINANCE_APPROVED') || s.includes('PAID');
+  };
+
+  const filteredExpenses = filterStatus === 'all'
+    ? expenses
+    : expenses.filter(e => getStatusGroup(e.status) === filterStatus.toLowerCase());
 
   const stats = {
     total: expenses.length,
-    pending: expenses.filter(e => e.status?.toLowerCase() === 'pending').length,
-    approved: expenses.filter(e => e.status?.toLowerCase() === 'approved').length,
-    rejected: expenses.filter(e => e.status?.toLowerCase() === 'rejected').length,
-    totalAmount: expenses.reduce((sum, e) => sum + parseFloat(String(e.amount || 0)), 0)
+    pending: expenses.filter(e => getStatusGroup(e.status) === 'pending').length,
+    approved: expenses.filter(e => getStatusGroup(e.status) === 'approved').length,
+    rejected: expenses.filter(e => getStatusGroup(e.status) === 'rejected').length,
+    totalAmount: expenses.reduce((sum, e) => sum + parseAmount(e.amount), 0),
+    companySpentAmount: expenses
+      .filter(e => isCompanySpent(e.status))
+      .reduce((sum, e) => sum + parseAmount(e.amount), 0)
   };
 
   if (!isAuthorized) {
@@ -155,30 +193,30 @@ export default function HRDashboard() {
 
         {/* Key Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 mb-8">
-          <div className="bg-white/5 border border-blue-400/30 rounded-xl p-6 text-white">
+          <div className="bg-white border border-blue-200 rounded-xl p-6">
             <div className="text-3xl mb-2">📊</div>
-            <p className="text-blue-300 text-sm mb-1">Total Expenses</p>
-            <p className="text-3xl font-bold">{stats.total}</p>
+            <p className="text-slate-600 text-sm mb-1">Total Expenses</p>
+            <p className="text-3xl font-bold text-slate-900">{stats.total}</p>
           </div>
-          <div className="bg-white/5 border border-yellow-400/30 rounded-xl p-6 text-white">
+          <div className="bg-white border border-yellow-200 rounded-xl p-6">
             <div className="text-3xl mb-2">⏳</div>
-            <p className="text-yellow-300 text-sm mb-1">Pending</p>
-            <p className="text-3xl font-bold">{stats.pending}</p>
+            <p className="text-slate-600 text-sm mb-1">Pending</p>
+            <p className="text-3xl font-bold text-slate-900">{stats.pending}</p>
           </div>
-          <div className="bg-white/5 border border-green-400/30 rounded-xl p-6 text-white">
+          <div className="bg-white border border-green-200 rounded-xl p-6">
             <div className="text-3xl mb-2">✅</div>
-            <p className="text-green-300 text-sm mb-1">Approved</p>
-            <p className="text-3xl font-bold">{stats.approved}</p>
+            <p className="text-slate-600 text-sm mb-1">Approved</p>
+            <p className="text-3xl font-bold text-slate-900">{stats.approved}</p>
           </div>
-          <div className="bg-white/5 border border-red-400/30 rounded-xl p-6 text-white">
+          <div className="bg-white border border-red-200 rounded-xl p-6">
             <div className="text-3xl mb-2">❌</div>
-            <p className="text-red-300 text-sm mb-1">Rejected</p>
-            <p className="text-3xl font-bold">{stats.rejected}</p>
+            <p className="text-slate-600 text-sm mb-1">Rejected</p>
+            <p className="text-3xl font-bold text-slate-900">{stats.rejected}</p>
           </div>
-          <div className="bg-white/5 border border-purple-400/30 rounded-xl p-6 text-white">
+          <div className="bg-white border border-purple-200 rounded-xl p-6">
             <div className="text-3xl mb-2">💰</div>
-            <p className="text-purple-300 text-sm mb-1">Total Amount</p>
-            <p className="text-3xl font-bold">₹{(stats.totalAmount / 100000).toFixed(1)}L</p>
+            <p className="text-slate-600 text-sm mb-1">Total Amount</p>
+            <p className="text-3xl font-bold text-slate-900">₹{formatInr(stats.companySpentAmount)}</p>
           </div>
         </div>
 
@@ -228,19 +266,19 @@ export default function HRDashboard() {
 
         {/* Expenses Table */}
         {loading ? (
-          <div className="text-center text-white py-12">
+          <div className="text-center text-slate-700 py-12">
             <p className="text-xl">Loading expenses...</p>
           </div>
         ) : filteredExpenses.length === 0 ? (
-          <div className="bg-white/5 border border-white/20 rounded-xl p-12 text-center text-white">
+          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center text-slate-700">
             <p className="text-xl">No expenses found</p>
           </div>
         ) : (
-          <div className="bg-white/5 backdrop-blur-md border border-white/20 rounded-xl overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-white/10 border-b border-white/20">
-                  <tr className="text-left text-white">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr className="text-left text-slate-700">
                     <th className="px-6 py-4 font-semibold">Employee</th>
                     <th className="px-6 py-4 font-semibold">Description</th>
                     <th className="px-6 py-4 font-semibold">Amount</th>
@@ -249,16 +287,16 @@ export default function HRDashboard() {
                     <th className="px-6 py-4 font-semibold">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/10">
+                <tbody className="divide-y divide-slate-100">
                   {filteredExpenses.map((expense) => (
-                    <tr key={expense.id} className="hover:bg-white/5 transition">
-                      <td className="px-6 py-4 text-white">
+                    <tr key={expense.id} className="hover:bg-slate-50 transition">
+                      <td className="px-6 py-4 text-slate-900">
                         <div className="font-semibold">{expense.first_name} {expense.last_name}</div>
-                        <div className="text-sm text-blue-300">ID: {expense.user_id}</div>
+                        <div className="text-sm text-slate-500">ID: {expense.user_id}</div>
                       </td>
-                      <td className="px-6 py-4 text-white text-sm">{expense.description}</td>
-                      <td className="px-6 py-4 text-white font-bold">₹{parseFloat(String(expense.amount)).toFixed(2)}</td>
-                      <td className="px-6 py-4 text-blue-300 text-sm">{new Date(expense.expense_date).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 text-slate-700 text-sm">{expense.description}</td>
+                      <td className="px-6 py-4 text-slate-900 font-bold">₹{parseFloat(String(expense.amount)).toFixed(2)}</td>
+                      <td className="px-6 py-4 text-slate-600 text-sm">{new Date(expense.expense_date).toLocaleDateString()}</td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(expense.status)}`}>
                           {expense.status}
@@ -266,7 +304,7 @@ export default function HRDashboard() {
                       </td>
                       <td className="px-6 py-4">
                         <Link
-                          href={`/approvals-manager/${expense.id}`}
+                          href={`/approvals-manager?expenseId=${expense.id}`}
                           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition"
                         >
                           Review
@@ -279,34 +317,6 @@ export default function HRDashboard() {
             </div>
           </div>
         )}
-
-        {/* Quick Links */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Link
-            href="/"
-            className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 rounded-xl p-6 group cursor-pointer hover:shadow-lg transition"
-          >
-            <div className="text-4xl mb-3">🏠</div>
-            <h3 className="text-xl font-bold text-blue-600 mb-2">Employee View</h3>
-            <p className="text-sm text-gray-700">Switch to employee dashboard</p>
-          </Link>
-          <Link
-            href="/manager-dashboard"
-            className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-2 border-emerald-300 rounded-xl p-6 group cursor-pointer hover:shadow-lg transition"
-          >
-            <div className="text-4xl mb-3">👤</div>
-            <h3 className="text-xl font-bold text-emerald-600 mb-2">Manager View</h3>
-            <p className="text-sm text-gray-700">Switch to manager dashboard</p>
-          </Link>
-          <Link
-            href="/approvals-manager"
-            className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-300 rounded-xl p-6 group cursor-pointer hover:shadow-lg transition"
-          >
-            <div className="text-4xl mb-3">📋</div>
-            <h3 className="text-xl font-bold text-purple-600 mb-2">Detailed View</h3>
-            <p className="text-sm text-gray-700">Individual expense review</p>
-          </Link>
-        </div>
       </div>
     </div>
   );

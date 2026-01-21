@@ -1,14 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import engine, Base, SessionLocal
-from app.routes import expense, approval, auth, analytics, finance
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
+from app.database import get_db, SessionLocal
+from app.models import Base, User, Role, EmployeeGrade, ExpenseCategory, TransportationType, Notification
+from app.routes import auth, expense, approval, analytics, finance, notification
 from app.config import settings
-from app.models.user import Role, User
-from app.models.expense import ExpenseCategory, TransportationType
 from app.utils.security import hash_password
 import logging
+import os
 
-# Setup logging
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -44,41 +46,48 @@ def init_db():
             logger.info("✅ Roles already exist")
         
         # Check if demo users exist
-        demo_user = db.query(User).filter(User.email == 'manager@expensehub.com').first()
-        if not demo_user:
+        manager_user = db.query(User).filter(User.email == 'rajesh.kumar@expensemgmt.com').first()
+        finance_user = db.query(User).filter(User.email == 'priya.sharma@expensemgmt.com').first()
+        if not manager_user or not finance_user:
             logger.info("Creating permanent users...")
-            # Insert permanent users (Manager and Finance only)
-            demo_users = [
-                User(
-                    first_name='System',
-                    last_name='Manager',
-                    email='manager@expensehub.com',
-                    phone_number='+91-1234567890',
-                    password=hash_password('password123'),
-                    designation='Expense Manager',
-                    department='Finance',
-                    employee_id='MGR-001',
-                    role_id=2,
-                    is_active=True,
-                    is_verified=True
-                ),
-                User(
-                    first_name='Sarah',
-                    last_name='Johnson',
-                    email='sarah.johnson@expensehub.com',
-                    phone_number='+91-1234567891',
-                    password=hash_password('password123'),
-                    designation='Finance Officer',
-                    department='Finance',
-                    employee_id='FIN-001',
-                    role_id=3,
-                    is_active=True,
-                    is_verified=True
+            demo_users = []
+            if not manager_user:
+                demo_users.append(
+                    User(
+                        first_name='Rajesh',
+                        last_name='Kumar',
+                        email='rajesh.kumar@expensemgmt.com',
+                        phone_number='+91 0000000000',
+                        password=hash_password('Manager@2024!Secure'),
+                        designation='Manager',
+                        department='Operations',
+                        employee_id='MGR-001',
+                        role_id=2,
+                        is_active=True,
+                        is_verified=True
+                    )
                 )
-            ]
-            db.add_all(demo_users)
-            db.commit()
-            logger.info("✅ Permanent users created")
+            if not finance_user:
+                demo_users.append(
+                    User(
+                        first_name='Priya',
+                        last_name='Sharma',
+                        email='priya.sharma@expensemgmt.com',
+                        phone_number='+91 0000000001',
+                        password=hash_password('Finance@2024!Secure'),
+                        designation='Finance',
+                        department='Finance',
+                        employee_id='FIN-001',
+                        role_id=3,
+                        is_active=True,
+                        is_verified=True
+                    )
+                )
+
+            if demo_users:
+                db.add_all(demo_users)
+                db.commit()
+                logger.info("✅ Permanent users created")
         
         # Check if expense categories exist
         categories_exist = db.query(ExpenseCategory).first()
@@ -119,6 +128,35 @@ def init_db():
         else:
             logger.info("✅ Transportation types already exist")
         
+        # Check if expense policies exist
+        policies_exist = db.execute(text("SELECT COUNT(*) FROM expense_policies")).scalar()
+        if policies_exist == 0:
+            logger.info("Creating expense policies...")
+            # Sample policies for grade A (senior)
+            db.execute(text("""
+                INSERT INTO expense_policies (grade_id, category_id, max_amount, frequency, requires_approval) VALUES
+                (1, 1, 50000.00, 'PER_TRIP', TRUE),  -- Travel: Grade A, ₹50,000 per trip
+                (1, 2, 2000.00, 'DAILY', TRUE),     -- Food: Grade A, ₹2,000 daily
+                (1, 3, 10000.00, 'PER_TRIP', TRUE),  -- Accommodation: Grade A, ₹10,000 per trip
+                (1, 4, 5000.00, 'MONTHLY', FALSE),   -- Office Supplies: Grade A, ₹5,000 monthly
+                (1, 7, 25000.00, 'MONTHLY', TRUE),   -- Equipment: Grade A, ₹25,000 monthly
+                (1, 10, 5000.00, 'MONTHLY', FALSE)   -- Fuel: Grade A, ₹5,000 monthly
+            """))
+            # Sample policies for grade B (mid)
+            db.execute(text("""
+                INSERT INTO expense_policies (grade_id, category_id, max_amount, frequency, requires_approval) VALUES
+                (2, 1, 30000.00, 'PER_TRIP', TRUE),  -- Travel: Grade B, ₹30,000 per trip
+                (2, 2, 1500.00, 'DAILY', TRUE),     -- Food: Grade B, ₹1,500 daily
+                (2, 3, 7500.00, 'PER_TRIP', TRUE),   -- Accommodation: Grade B, ₹7,500 per trip
+                (2, 4, 3000.00, 'MONTHLY', FALSE),   -- Office Supplies: Grade B, ₹3,000 monthly
+                (2, 7, 15000.00, 'MONTHLY', TRUE),   -- Equipment: Grade B, ₹15,000 monthly
+                (2, 10, 3000.00, 'MONTHLY', FALSE)   -- Fuel: Grade B, ₹3,000 monthly
+            """))
+            db.commit()
+            logger.info("✅ Expense policies created")
+        else:
+            logger.info("✅ Expense policies already exist")
+        
     except Exception as e:
         db.rollback()
         logger.error(f"❌ Error initializing database: {str(e)}", exc_info=True)
@@ -153,6 +191,7 @@ app.include_router(expense.router)
 app.include_router(approval.router)
 app.include_router(analytics.router)
 app.include_router(finance.router)
+app.include_router(notification.router)
 
 @app.get("/")
 async def root():
