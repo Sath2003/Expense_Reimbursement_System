@@ -18,7 +18,7 @@ const roleInfo = {
   },
   manager: {
     title: '👨‍💼 Manager',
-    email: 'rajesh.kumar@expensemgmt.com',
+    email: 'sathviknbmath@gmail.com',
     password: 'Manager@2024',
     description: 'Review and approve team expenses, access analytics',
     features: ['Approve Expenses', 'Team Analytics', 'View Reports']

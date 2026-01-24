@@ -45,6 +45,11 @@ export default function ManagerDashboard() {
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [showDecisionModal, setShowDecisionModal] = useState(false);
+  const [decisionExpense, setDecisionExpense] = useState<Expense | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [teamBudget] = useState(50000);
+  const [policyViolations, setPolicyViolations] = useState<Record<number, any[]>>({});
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -71,6 +76,7 @@ export default function ManagerDashboard() {
       if (user.role_id === 2 || user.role_id === 3) {
         setIsAuthorized(true);
         fetchExpenses();
+        fetchAnalytics();
       } else {
         setError('You are not authorized to access the manager dashboard.');
         setLoading(false);
@@ -114,6 +120,23 @@ export default function ManagerDashboard() {
       setExpenses([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await apiCall('/analytics/spending?period=month', {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      setAnalyticsData(data);
+    } catch (err) {
+      console.error('Error fetching analytics:', err);
     }
   };
 
@@ -197,6 +220,180 @@ export default function ManagerDashboard() {
     };
     return colors[status?.toLowerCase()] || 'bg-gray-100 text-gray-800';
   };
+
+  const categoryMap: Record<number, string> = {
+    1: 'Travel',
+    2: 'Food',
+    3: 'Accommodation',
+    4: 'Office Supplies',
+    5: 'Communication',
+    6: 'Miscellaneous',
+    7: 'Equipment',
+    8: 'Meals',
+    9: 'Other',
+    10: 'Fuel',
+  };
+
+  const policyLimits = {
+    categoryRules: {
+      1: { requiresJustification: 5000, maxSingle: 10000 },
+      2: { requiresJustification: 1000, maxSingle: 3000 },
+      3: { requiresJustification: 3000, maxSingle: 8000 },
+      4: { requiresJustification: 2000, maxSingle: 5000 },
+      5: { requiresJustification: 1500, maxSingle: 4000 },
+      6: { requiresJustification: 1000, maxSingle: 2500 },
+      7: { requiresJustification: 5000, maxSingle: 15000 },
+      8: { requiresJustification: 800, maxSingle: 2000 },
+      9: { requiresJustification: 500, maxSingle: 1500 },
+      10: { requiresJustification: 2000, maxSingle: 5000 },
+    }
+  };
+
+  type DecisionRecommendation = {
+    label: 'APPROVE' | 'NEEDS_REVIEW' | 'RECOMMEND_REJECT';
+    severity: 'low' | 'medium' | 'high';
+    message: string;
+  };
+
+  const getDecisionRecommendation = (expense: Expense): DecisionRecommendation => {
+    const expenseDate = new Date(expense.expense_date);
+    const now = new Date();
+    const ageDays = Number.isFinite(expenseDate.getTime())
+      ? Math.floor((now.getTime() - expenseDate.getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+
+    if (ageDays !== null && ageDays > 31) {
+      return {
+        label: 'RECOMMEND_REJECT',
+        severity: 'high',
+        message: `Expense date is older than 1 month (${ageDays} days). Policy requires submission within 31 days of the bill date.`
+      };
+    }
+
+    const rawAmount = typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount;
+    const amount = Number.isFinite(rawAmount) ? rawAmount : 0;
+    const categoryName = categoryMap[expense.category_id] || 'this category';
+    const rules = policyLimits.categoryRules[expense.category_id];
+
+    if (!amount || amount <= 0) {
+      return {
+        label: 'NEEDS_REVIEW',
+        severity: 'medium',
+        message: `Amount is ₹0 or missing for ${categoryName}. Recommend reviewing the receipt/details before approving.`
+      };
+    }
+
+    if (!rules) {
+      return {
+        label: 'NEEDS_REVIEW',
+        severity: 'medium',
+        message: `No policy rules found for ${categoryName}. Recommend reviewing details before approving.`
+      };
+    }
+
+    if (amount > rules.maxSingle) {
+      return {
+        label: 'RECOMMEND_REJECT',
+        severity: 'high',
+        message: `₹${amount.toLocaleString('en-IN')} exceeds the maximum single-claim limit of ₹${rules.maxSingle.toLocaleString('en-IN')} for ${categoryName}. Recommend rejecting or requesting resubmission with proper justification.`
+      };
+    }
+
+    if (amount > rules.requiresJustification) {
+      return {
+        label: 'NEEDS_REVIEW',
+        severity: 'medium',
+        message: `₹${amount.toLocaleString('en-IN')} is above the justification threshold (₹${rules.requiresJustification.toLocaleString('en-IN')}) for ${categoryName}. Recommend requesting justification before approving.`
+      };
+    }
+
+    return {
+      label: 'APPROVE',
+      severity: 'low',
+      message: `Within standard limits for ${categoryName}. Approval is recommended if the description/receipt looks valid.`
+    };
+  };
+
+  const openDecisionModal = (expense: Expense, type: 'approve' | 'reject') => {
+    if (type === 'approve') {
+      setDecisionExpense(expense);
+      setShowDecisionModal(true);
+      return;
+    }
+    setDecisionExpense(null);
+    setShowDecisionModal(false);
+    setSelectedExpenseId(expense.id);
+    setShowRejectionModal(true);
+  };
+
+  const professionalMessages = {
+    amountExceeds: (amount: number, limit: number, category: string) =>
+      `The amount of ₹${amount.toLocaleString('en-IN')} for ${category} exceeds the standard limit of ₹${limit.toLocaleString('en-IN')}. Please provide justification for this expense.`,
+    unusualAmount: (amount: number, average: number, category: string) =>
+      `The amount of ₹${amount.toLocaleString('en-IN')} for ${category} is significantly higher than the average of ₹${average.toLocaleString('en-IN')}. Kindly provide detailed justification.`,
+    requiresJustification: (threshold: number, category: string) =>
+      `For ${category} expenses exceeding ₹${threshold.toLocaleString('en-IN')}, please provide detailed business justification and supporting documentation.`,
+  };
+
+  const checkPolicyViolations = (expense: Expense) => {
+    try {
+      if (!expense || !expense.category_id) return [];
+      const amount = typeof expense.amount === 'string' ? parseFloat(expense.amount) : expense.amount || 0;
+      if (Number.isNaN(amount) || amount <= 0) return [];
+
+      const violations: any[] = [];
+      const categoryName = categoryMap[expense.category_id] || 'Unknown';
+      const rules = policyLimits.categoryRules[expense.category_id];
+
+      if (rules) {
+        if (amount > rules.maxSingle) {
+          violations.push({
+            type: 'amountExceeds',
+            severity: 'high',
+            message: professionalMessages.amountExceeds(amount, rules.maxSingle, categoryName),
+          });
+        } else if (amount > rules.requiresJustification) {
+          violations.push({
+            type: 'requiresJustification',
+            severity: 'medium',
+            message: professionalMessages.requiresJustification(rules.requiresJustification, categoryName),
+          });
+        }
+      }
+
+      if (analyticsData && Array.isArray(analyticsData.category_breakdown)) {
+        const avg = analyticsData.category_breakdown.find((c: any) => c.category === categoryName);
+        if (avg && typeof avg.average_amount === 'number' && amount > avg.average_amount * 2) {
+          violations.push({
+            type: 'unusualAmount',
+            severity: 'medium',
+            message: professionalMessages.unusualAmount(amount, avg.average_amount, categoryName),
+          });
+        }
+      }
+
+      return violations;
+    } catch (e) {
+      console.error('Policy check failed:', e);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    try {
+      const v: Record<number, any[]> = {};
+      for (const exp of expenses) {
+        const violations = checkPolicyViolations(exp);
+        if (violations.length) {
+          v[exp.id] = violations;
+        }
+      }
+      setPolicyViolations(v);
+    } catch (e) {
+      console.error('Violation aggregation failed:', e);
+      setPolicyViolations({});
+    }
+  }, [expenses, analyticsData]);
 
   // Map filter status to actual enum values
   const getFilteredExpenses = () => {
@@ -287,6 +484,37 @@ export default function ManagerDashboard() {
           </div>
         </div>
 
+        {userRole === 2 && (
+          <div className="mb-10">
+            <h2 className="text-2xl font-bold text-primary-900 mb-6">Team Pulse Dashboard</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-6 shadow-soft-md">
+                <div className="text-3xl mb-2">💼</div>
+                <p className="text-blue-700 text-sm font-semibold">Team Budget Used</p>
+                <p className="text-2xl font-bold text-blue-900 mb-2">
+                  {Math.round((((analyticsData?.total_amount || 0) as number) / teamBudget) * 100)}%
+                </p>
+                <div className="w-full bg-blue-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min((((analyticsData?.total_amount || 0) as number) / teamBudget) * 100, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-blue-600 mt-2">
+                  ₹{(((analyticsData?.total_amount || 0) as number)).toLocaleString('en-IN')} / ₹{teamBudget.toLocaleString('en-IN')}
+                </p>
+              </div>
+
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-2xl p-6 shadow-soft-md">
+                <div className="text-3xl mb-2">✅</div>
+                <p className="text-purple-700 text-sm font-semibold">Approval Rate</p>
+                <p className="text-3xl font-bold text-purple-900">{analyticsData?.approval_rate || 0}%</p>
+                <p className="text-xs text-purple-600 mt-2">This month</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Filter */}
         <div className="mb-8 flex gap-3 flex-wrap">
           {['all', 'pending', 'approved', 'rejected'].map(status => (
@@ -338,7 +566,14 @@ export default function ManagerDashboard() {
                         <div className="font-semibold text-sm">{expense.first_name} {expense.last_name}</div>
                         <div className="text-xs text-slate-500">ID: {expense.user_id}</div>
                       </td>
-                      <td className="px-6 py-4 text-slate-700 text-sm">{expense.description}</td>
+                      <td className="px-6 py-4 text-slate-700 text-sm">
+                        <div>{expense.description}</div>
+                        {policyViolations[expense.id] && (
+                          <div className="mt-1 text-xs font-semibold text-amber-700">
+                            Policy review required
+                          </div>
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-slate-900 font-semibold text-sm">₹{parseFloat(String(expense.amount)).toFixed(2)}</td>
                       <td className="px-6 py-4 text-slate-600 text-sm">{new Date(expense.expense_date).toLocaleDateString()}</td>
                       <td className="px-6 py-4">
@@ -349,12 +584,50 @@ export default function ManagerDashboard() {
                         }`}>
                           {expense.status}
                         </span>
+                        {expense.status?.toUpperCase() === 'SUBMITTED' && (
+                          (() => {
+                            const rec = getDecisionRecommendation(expense);
+                            const badgeColor = rec.severity === 'high'
+                              ? 'bg-red-50 text-red-700 border-red-200'
+                              : rec.severity === 'medium'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-green-50 text-green-700 border-green-200';
+                            const badgeText = rec.label === 'APPROVE'
+                              ? 'AI: Approve'
+                              : rec.label === 'RECOMMEND_REJECT'
+                                ? 'AI: Recommend Reject'
+                                : 'AI: Needs Review';
+                            return (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {(() => {
+                                  const d = new Date(expense.expense_date);
+                                  const t = new Date();
+                                  const days = Number.isFinite(d.getTime())
+                                    ? Math.floor((t.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
+                                    : null;
+                                  if (days !== null && days > 31) {
+                                    return (
+                                      <div className="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold border bg-red-50 text-red-700 border-red-200" title="Expense date older than 31 days">
+                                        Date: Over 1 month
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+
+                                <div className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold border ${badgeColor}`} title={rec.message}>
+                                  {badgeText}
+                                </div>
+                              </div>
+                            );
+                          })()
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         {expense.status?.toUpperCase() === 'SUBMITTED' ? (
                           <div className="flex gap-2">
                             <button
-                              onClick={() => handleApprove(expense.id)}
+                              onClick={() => openDecisionModal(expense, 'approve')}
                               disabled={approvingId === expense.id || rejectingId === expense.id}
                               className="px-3 py-1.5 bg-secondary-600 hover:bg-secondary-700 disabled:bg-secondary-400 text-white rounded-lg text-xs font-semibold transition"
                             >
@@ -362,8 +635,7 @@ export default function ManagerDashboard() {
                             </button>
                             <button
                               onClick={() => {
-                                setSelectedExpenseId(expense.id);
-                                setShowRejectionModal(true);
+                                openDecisionModal(expense, 'reject');
                               }}
                               disabled={approvingId === expense.id || rejectingId === expense.id}
                               className="px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg text-xs font-semibold transition"
@@ -384,6 +656,63 @@ export default function ManagerDashboard() {
         )}
       </div>
 
+      {/* Decision Recommendation Modal (Approve) */}
+      {showDecisionModal && decisionExpense && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-lg w-full border border-slate-200 shadow-soft-lg">
+            <div className="p-6 border-b border-slate-200">
+              <h3 className="text-xl font-bold text-primary-900">Recommendation</h3>
+              <p className="text-slate-600 text-sm mt-1">Review the suggestion before approving</p>
+            </div>
+
+            <div className="p-6">
+              {(() => {
+                const rec = getDecisionRecommendation(decisionExpense);
+                const panelColor = rec.severity === 'high'
+                  ? 'bg-red-50 border-red-200'
+                  : rec.severity === 'medium'
+                    ? 'bg-amber-50 border-amber-200'
+                    : 'bg-green-50 border-green-200';
+                const title = rec.label === 'APPROVE'
+                  ? '✅ Approve Recommended'
+                  : rec.label === 'RECOMMEND_REJECT'
+                    ? '❌ Recommend Reject'
+                    : '⚠️ Needs Review';
+                return (
+                  <div className={`p-4 border rounded-lg ${panelColor}`}>
+                    <p className="font-bold text-slate-900">{title}</p>
+                    <p className="text-sm text-slate-700 mt-2">{rec.message}</p>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="p-6 border-t border-slate-200 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDecisionModal(false);
+                  setDecisionExpense(null);
+                }}
+                className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-semibold transition text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const id = decisionExpense.id;
+                  setShowDecisionModal(false);
+                  setDecisionExpense(null);
+                  await handleApprove(id);
+                }}
+                className="flex-1 px-4 py-2 bg-secondary-600 hover:bg-secondary-700 text-white rounded-lg font-semibold transition text-sm"
+              >
+                Proceed to Approve
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Rejection Reason Modal */}
       {showRejectionModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -394,6 +723,22 @@ export default function ManagerDashboard() {
             </div>
 
             <div className="p-6">
+              {(() => {
+                const exp = expenses.find(e => e.id === selectedExpenseId);
+                if (!exp) return null;
+                const rec = getDecisionRecommendation(exp);
+                const panelColor = rec.severity === 'high'
+                  ? 'bg-red-50 border-red-200'
+                  : rec.severity === 'medium'
+                    ? 'bg-amber-50 border-amber-200'
+                    : 'bg-green-50 border-green-200';
+                return (
+                  <div className={`mb-4 p-4 border rounded-lg ${panelColor}`}>
+                    <p className="font-bold text-slate-900">Recommendation</p>
+                    <p className="text-sm text-slate-700 mt-2">{rec.message}</p>
+                  </div>
+                );
+              })()}
               <textarea
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
@@ -409,6 +754,8 @@ export default function ManagerDashboard() {
                   setShowRejectionModal(false);
                   setRejectionReason('');
                   setSelectedExpenseId(null);
+                  setShowDecisionModal(false);
+                  setDecisionExpense(null);
                 }}
                 className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-lg font-semibold transition text-sm"
               >

@@ -185,14 +185,30 @@ export default function FinanceDashboard() {
       const analysis = result.analysis;
 
       // Format the analysis report
+      const analysisSource = analysis?.source || (analysis?.analysis_available ? 'llama' : 'unknown');
+      const scoreText = (typeof analysis?.genuineness_score === 'number')
+        ? analysis.genuineness_score.toFixed(1) + '%'
+        : 'N/A';
+      const recommendationText = analysis?.recommendation
+        ? analysis.recommendation
+        : (!analysis?.analysis_available
+          ? '⏳ AI ANALYSIS NOT AVAILABLE - MANUAL REVIEW REQUIRED'
+          : (analysis?.genuineness_score && analysis.genuineness_score >= 80
+            ? '✅ SAFE TO APPROVE'
+            : analysis?.genuineness_score && analysis.genuineness_score >= 50
+              ? '⚠️ NEEDS REVIEW'
+              : '❌ RECOMMEND REJECTION'));
+
       let reportText = `📋 AI BILL GENUINENESS ANALYSIS REPORT
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ANALYSIS STATUS
-${analysis.analysis_available ? '✅ AI Analysis Performed' : '⚠️ AI Analysis Unavailable'}
+${analysis.analysis_available ? '✅ AI Analysis Performed' : '⚠️ AI Analysis Unavailable (Fallback Applied)'}
 Model: ${analysis.model_used || 'Llama'}
-Genuineness Score: ${analysis.genuineness_score ? analysis.genuineness_score.toFixed(1) + '%' : 'N/A'}
+Source: ${analysisSource}
+Status: ${analysis.status || 'unknown'}
+Genuineness Score: ${scoreText}
 
 RISK ASSESSMENT
 🎯 Risk Level: ${analysis.risk_level ? analysis.risk_level.toUpperCase() : 'UNKNOWN'}
@@ -216,10 +232,7 @@ EXPENSE DETAILS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 RECOMMENDATION
-${!analysis.analysis_available ? '⏳ AI ANALYSIS NOT AVAILABLE - MANUAL REVIEW REQUIRED' :
-  analysis.genuineness_score && analysis.genuineness_score >= 80 ? '✅ SAFE TO APPROVE' : 
-  analysis.genuineness_score && analysis.genuineness_score >= 50 ? '⚠️ NEEDS REVIEW' : 
-  '❌ RECOMMEND REJECTION'}
+${recommendationText}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       `;

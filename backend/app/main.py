@@ -46,7 +46,7 @@ def init_db():
             logger.info("✅ Roles already exist")
         
         # Check if demo users exist
-        manager_user = db.query(User).filter(User.email == 'rajesh.kumar@expensemgmt.com').first()
+        manager_user = db.query(User).filter(User.email == 'sathviknbmath@gmail.com').first()
         finance_user = db.query(User).filter(User.email == 'priya.sharma@expensemgmt.com').first()
         if not manager_user or not finance_user:
             logger.info("Creating permanent users...")
@@ -54,11 +54,11 @@ def init_db():
             if not manager_user:
                 demo_users.append(
                     User(
-                        first_name='Rajesh',
-                        last_name='Kumar',
-                        email='rajesh.kumar@expensemgmt.com',
+                        first_name='Sathvik',
+                        last_name='NB Math',
+                        email='sathviknbmath@gmail.com',
                         phone_number='+91 0000000000',
-                        password=hash_password('Manager@2024!Secure'),
+                        password=hash_password('Manager@2024'),
                         designation='Manager',
                         department='Operations',
                         employee_id='MGR-001',
@@ -74,7 +74,7 @@ def init_db():
                         last_name='Sharma',
                         email='priya.sharma@expensemgmt.com',
                         phone_number='+91 0000000001',
-                        password=hash_password('Finance@2024!Secure'),
+                        password=hash_password('Finance@2024'),
                         designation='Finance',
                         department='Finance',
                         employee_id='FIN-001',

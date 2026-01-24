@@ -1,9 +1,9 @@
 {
   "/manager-dashboard/page": "app/manager-dashboard/page.js",
-  "/page": "app/page.js",
+  "/submit-expense/page": "app/submit-expense/page.js",
+  "/login/page": "app/login/page.js",
   "/analytics/page": "app/analytics/page.js",
   "/finance-dashboard/page": "app/finance-dashboard/page.js",
-  "/hr-dashboard/page": "app/hr-dashboard/page.js",
-  "/approvals-manager/page": "app/approvals-manager/page.js",
-  "/login/page": "app/login/page.js"
+  "/page": "app/page.js",
+  "/hr-dashboard/page": "app/hr-dashboard/page.js"
 }

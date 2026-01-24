@@ -10,6 +10,7 @@ from app.models.user import User, RoleEnum
 from app.models.expense import ExpenseStatusEnum, Expense
 from app.models.approval import ExpenseApproval, ApprovalRole
 from typing import List, Optional, Dict, Any
+import json
 
 router = APIRouter(prefix="/api/approvals", tags=["approvals"])
 
@@ -452,7 +453,75 @@ async def analyze_bill_with_ai(
             category=expense.category.category_name if expense.category else "Other",
             extracted_text=extracted_text,
         )
-        
+
+        def _fallback_analysis() -> Dict[str, Any]:
+            raw_score = None
+            try:
+                raw_score = float(expense.validation_score) if expense.validation_score is not None else None
+            except Exception:
+                raw_score = None
+
+            score = 85.0
+            flaws: List[str] = []
+            reasons: List[str] = []
+            suspicious = False
+
+            if not extracted_text.strip():
+                score = min(score, 60.0)
+                flaws.append("No readable text extracted from receipt")
+                suspicious = True
+
+            if raw_score is not None:
+                score = (score + max(0.0, min(100.0, raw_score))) / 2.0
+
+            risk_factors = []
+            if expense.risk_factors:
+                try:
+                    risk_factors = json.loads(expense.risk_factors) if isinstance(expense.risk_factors, str) else expense.risk_factors
+                except Exception:
+                    risk_factors = []
+
+            if isinstance(risk_factors, list) and risk_factors:
+                suspicious = True
+                score -= min(25.0, 5.0 * len(risk_factors))
+                reasons.extend([str(x) for x in risk_factors[:5]])
+
+            if expense.policy_check_result and isinstance(expense.policy_check_result, dict):
+                violations = expense.policy_check_result.get("violations")
+                if isinstance(violations, list) and violations:
+                    suspicious = True
+                    score -= 10.0
+                    reasons.extend([str(v) for v in violations[:3]])
+
+            score = max(0.0, min(100.0, score))
+
+            if score >= 80:
+                risk_level = "low"
+                recommendation = "✅ SAFE TO APPROVE"
+            elif score >= 60:
+                risk_level = "medium"
+                recommendation = "⚠️ NEEDS REVIEW"
+            else:
+                risk_level = "high"
+                recommendation = "❌ RECOMMEND REJECTION"
+                suspicious = True
+
+            return {
+                "analysis_available": False,
+                "status": "fallback",
+                "model_used": analysis.get("model_used") if isinstance(analysis, dict) else None,
+                "source": "fallback",
+                "genuineness_score": score,
+                "risk_level": risk_level,
+                "is_suspicious": suspicious,
+                "flaws_detected": flaws,
+                "rejection_reasons": reasons,
+                "recommendation": recommendation,
+            }
+
+        if not analysis.get("analysis_available"):
+            analysis = _fallback_analysis()
+
         logger.info(f"[AI-ANALYZE] Analysis complete: {analysis}")
         
         return {

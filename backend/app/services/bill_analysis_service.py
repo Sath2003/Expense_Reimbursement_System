@@ -9,6 +9,35 @@ from app.config import settings
 
 class BillAnalysisService:
     """Service to analyze expense bills for genuineness, flaws, and rejection reasons"""
+
+    @staticmethod
+    def _derive_risk_fields(genuineness_score: Optional[float], is_suspicious: bool) -> Dict[str, Any]:
+        score = float(genuineness_score) if genuineness_score is not None else None
+        if score is None:
+            risk_level = "unknown"
+        elif score >= 80:
+            risk_level = "low"
+        elif score >= 60:
+            risk_level = "medium"
+        else:
+            risk_level = "high"
+
+        if is_suspicious and risk_level == "low":
+            risk_level = "medium"
+
+        if score is None:
+            recommendation = "⏳ AI ANALYSIS NOT AVAILABLE - MANUAL REVIEW REQUIRED"
+        elif score >= 80:
+            recommendation = "✅ SAFE TO APPROVE"
+        elif score >= 60:
+            recommendation = "⚠️ NEEDS REVIEW"
+        else:
+            recommendation = "❌ RECOMMEND REJECTION"
+
+        return {
+            "risk_level": risk_level,
+            "recommendation": recommendation,
+        }
     
     @staticmethod
     async def analyze_bill_for_rejection(
@@ -25,13 +54,17 @@ class BillAnalysisService:
         """
         
         if not settings.OLLAMA_ENABLED:
-            return {
+            base = {
                 "analysis_available": False,
                 "status": "skip",
                 "genuineness_score": None,
                 "flaws_detected": [],
                 "rejection_reasons": [],
+                "is_suspicious": False,
+                "model_used": settings.OLLAMA_MODEL,
             }
+            base.update(BillAnalysisService._derive_risk_fields(None, False))
+            return base
         
         # Prepare analysis prompt
         prompt = {
@@ -55,23 +88,31 @@ class BillAnalysisService:
             }
         }
         
+        url = settings.OLLAMA_URL.rstrip("/") + "/api/generate"
+        payload = {
+            "model": settings.OLLAMA_MODEL,
+            "prompt": json.dumps(prompt, ensure_ascii=False),
+            "stream": False,
+            "format": "json",
+        }
+
         try:
-            async with httpx.AsyncClient(timeout=30) as client:
-                response = await client.post(
-                    "http://ollama:11434/api/generate",
-                    json={
-                        "model": "llama2",
-                        "prompt": json.dumps(prompt),
-                        "stream": False,
-                    }
-                )
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                response = await client.post(url, json=payload)
                 
                 if response.status_code != 200:
-                    return {
+                    base = {
                         "analysis_available": False,
                         "status": "error",
                         "error": f"Ollama API error: {response.status_code}",
+                        "genuineness_score": None,
+                        "flaws_detected": [],
+                        "rejection_reasons": [],
+                        "is_suspicious": False,
+                        "model_used": settings.OLLAMA_MODEL,
                     }
+                    base.update(BillAnalysisService._derive_risk_fields(None, False))
+                    return base
                 
                 result = response.json()
                 response_text = result.get("response", "").strip()
@@ -79,27 +120,46 @@ class BillAnalysisService:
                 # Parse the JSON response
                 try:
                     analysis = json.loads(response_text)
-                    return {
+                    score = analysis.get("genuineness_score", 50)
+                    suspicious = bool(analysis.get("is_suspicious", False))
+                    base = {
                         "analysis_available": True,
                         "status": "success",
-                        "genuineness_score": analysis.get("genuineness_score", 50),
+                        "genuineness_score": score,
                         "flaws_detected": analysis.get("flaws_detected", []),
                         "rejection_reasons": analysis.get("rejection_reasons", []),
-                        "is_suspicious": analysis.get("is_suspicious", False),
+                        "is_suspicious": suspicious,
+                        "model_used": settings.OLLAMA_MODEL,
                     }
+                    base.update(BillAnalysisService._derive_risk_fields(score, suspicious))
+                    return base
                 except json.JSONDecodeError:
-                    return {
-                        "analysis_available": True,
+                    base = {
+                        "analysis_available": False,
                         "status": "parse_error",
                         "raw_response": response_text,
+                        "genuineness_score": None,
+                        "flaws_detected": [],
+                        "rejection_reasons": [],
+                        "is_suspicious": True,
+                        "model_used": settings.OLLAMA_MODEL,
                     }
+                    base.update(BillAnalysisService._derive_risk_fields(None, True))
+                    return base
                     
         except Exception as e:
-            return {
+            base = {
                 "analysis_available": False,
                 "status": "error",
                 "error": str(e),
+                "genuineness_score": None,
+                "flaws_detected": [],
+                "rejection_reasons": [],
+                "is_suspicious": True,
+                "model_used": settings.OLLAMA_MODEL,
             }
+            base.update(BillAnalysisService._derive_risk_fields(None, True))
+            return base
     
     @staticmethod
     def format_rejection_remarks(analysis: Dict[str, Any]) -> str:
