@@ -141,7 +141,7 @@ npm run dev
 
 | Role           | Email                             | Password       | Employee ID |
 |----------------|-----------------------------------|----------------|-------------|
-| 👨‍💼 Manager     | rajesh.kumar@expensemgmt.com      | Manager@2024   | MGR-001     |
+| 👨‍💼 Manager     | sathviknbmath@gmail.com      | Manager@2024   | MGR-001     |
 | 💰 Finance     | priya.sharma@expensemgmt.com      | Finance@2024   | FIN-001     |
 
 ---
