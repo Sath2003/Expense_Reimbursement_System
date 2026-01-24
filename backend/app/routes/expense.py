@@ -26,6 +26,7 @@ from decimal import Decimal
 import os
 import tempfile
 import logging
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -388,10 +389,23 @@ async def submit_expense(
         if receipt and receipt.filename:
             try:
                 await receipt.seek(0)
-                file_path, file_hash, file_size, file_type = await FileHandler.save_file(
+                file_content = await receipt.read()
+                file_hash = hashlib.sha256(file_content).hexdigest()
+                # Check for duplicate receipt by hash
+                existing_attachment = db.query(ExpenseAttachment).filter(ExpenseAttachment.file_hash == file_hash).first()
+                if existing_attachment:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Duplicate receipt detected. This file has already been submitted."
+                    )
+                # Reset file pointer for saving
+                await receipt.seek(0)
+                file_path, saved_hash, file_size, file_type = await FileHandler.save_file(
                     file=receipt,
                     expense_id=expense.id
                 )
+                # Ensure saved hash matches computed hash; if not, use computed
+                final_hash = saved_hash if saved_hash else file_hash
                 await receipt.seek(0)
                 
                 # Link attachment to expense
@@ -401,7 +415,7 @@ async def submit_expense(
                     file_name=receipt.filename,
                     file_type=file_type,
                     file_size=file_size,
-                    file_hash=file_hash
+                    file_hash=final_hash
                 )
                 db.add(expense_attachment)
                 db.commit()
@@ -434,6 +448,8 @@ async def submit_expense(
                             old_value={"amount": str(old_amount)},
                             new_value={"amount": str(extracted_after_save), "confidence": conf_after_save, "note": note_after_save}
                         )
+            except HTTPException:
+                raise
             except Exception as file_err:
                 # Log error but don't fail the expense submission
                 print(f"File upload error: {file_err}")
@@ -442,6 +458,9 @@ async def submit_expense(
         # Create approval records - for both manager and HR
         ApprovalService.submit_for_manager_approval(db=db, expense_id=expense.id)
         ApprovalService.submit_for_hr_approval(db=db, expense_id=expense.id)
+        
+        # Run pre-screen checks and store flags
+        _apply_pre_screen_checks(db, expense)
         
         # Notify manager about new expense
         await NotificationService.notify_expense_submitted(
@@ -933,3 +952,70 @@ async def get_file(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error serving file: {str(e)}"
         )
+
+
+def _apply_pre_screen_checks(db: Session, expense: Expense):
+    """
+    Compute and store rule-based pre-screen flags and recommendation.
+    This does not call Llama; it only uses deterministic rules.
+    """
+    flags = []
+    score = 100.0
+
+    # Date flag (already enforced on submit, but store for visibility)
+    today = datetime.utcnow().date()
+    if expense.expense_date:
+        days_old = (today - expense.expense_date).days
+        if days_old > 31:
+            flags.append("DATE_TOO_OLD")
+            score -= 30.0
+        elif days_old < 0:
+            flags.append("DATE_IN_FUTURE")
+            score -= 30.0
+
+    # Policy violation flag
+    if expense.policy_check_result:
+        try:
+            policy_data = isinstance(expense.policy_check_result, dict) and expense.policy_check_result or {}
+            violations = policy_data.get("violations")
+            if isinstance(violations, list) and violations:
+                flags.append("POLICY_VIOLATION")
+                score -= 20.0
+        except Exception:
+            pass
+
+    # Receipt quality flag
+    if not expense.extracted_text or len(expense.extracted_text.strip()) < 10:
+        flags.append("NO_TEXT_EXTRACTED")
+        score -= 25.0
+
+    # Amount sanity
+    try:
+        amt = float(expense.amount)
+        if amt <= 0:
+            flags.append("AMOUNT_MISSING_OR_ZERO")
+            score -= 20.0
+    except Exception:
+        flags.append("AMOUNT_MISSING_OR_ZERO")
+        score -= 20.0
+
+    score = max(0.0, min(100.0, score))
+
+    # Derive recommendation
+    if score >= 80:
+        recommendation = "✅ SAFE TO APPROVE"
+    elif score >= 60:
+        recommendation = "⚠️ NEEDS REVIEW"
+    else:
+        recommendation = "❌ RECOMMEND REJECTION"
+
+    # Store on expense
+    expense.validation_score = score
+    expense.risk_factors = {"flags": flags}
+    expense.ai_analysis = {
+        "source": "pre_screen",
+        "recommendation": recommendation,
+        "flags": flags,
+        "score": score
+    }
+    db.commit()
