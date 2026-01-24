@@ -40,7 +40,7 @@ python test_full_workflow.py
 
 **Supported Formats**:
 - Images: JPG, JPEG, PNG, GIF, BMP, WEBP
-- Documents: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX
+- Documents: PDF, DOC, DOCx
 - Other: TXT, CSV
 
 **Run**:
